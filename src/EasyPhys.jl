@@ -1,5 +1,10 @@
 module EasyPhys
 
-# package code goes here
+using LsqFit
 
-end # module
+export fit # TODO: others?
+
+include("fitter.jl")
+include("data.jl")
+
+end
