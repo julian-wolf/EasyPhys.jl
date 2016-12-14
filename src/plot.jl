@@ -6,10 +6,8 @@ Plots the data and fitting functions associated with `fitter`. Updates the
 settings of `fitter` from the values given in `kwargs` before fitting.
 Returns the canvas.
 """
-function plot(fitter::Fitter; kwargs...)
-    set!(fitter, kwargs...)
-
-    fig = plt.figure()
+function plot(fitter::Fitter)
+    fig = plt.figure(fitter._figure_number)
 
     ax_main = plt.subplot2grid((4, 1), (0, 0), rowspan=3)
     plt.xscale(fitter[:xscale])
@@ -58,8 +56,8 @@ function plot(fitter::Fitter; kwargs...)
             ax_main[:plot](x_plot, y_guess; fitter[:style_guess]...)
         end
     catch e
-        if isa(e, ErrorException)
-            print(e.msg)
+        if isa(e, NoResultsException)
+            println(e.msg)
         else
             rethrow(e)
         end

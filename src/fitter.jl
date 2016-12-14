@@ -1,5 +1,18 @@
 
-# TODO: clean up Exceptions
+type CannotFitException <: Exception
+    msg::String
+end
+
+
+type BadDataException <: Exception
+    msg::String
+end
+
+
+type NoResultsException <: Exception
+    msg::String
+end
+
 
 """
 Describes a set of data and a model to be fit to.
@@ -33,6 +46,9 @@ type Fitter
     "Number of parameters to be fit to."
     _n_parameters::Int64
 
+    "Figure number of the associated plot."
+    _figure_number::Int64
+
 end
 
 
@@ -44,7 +60,7 @@ Creates a new Fitter object with model function `f`.
 function Fitter(f::Function; kwargs...)
     results = Nullable{LsqFit.LsqFitResult}()
 
-    settings = Dict(
+    settings = Dict{Symbol, Any}(
             :autoplot    => true,
             :xscale      => "linear",
             :yscale      => "linear",
@@ -60,21 +76,26 @@ function Fitter(f::Function; kwargs...)
             :style_guess => Dict(:marker => "",  :color => "k", :ls => "--")
         )
 
-    for (k, v) in kwargs
-        settings[k] = v
-    end
+    merge!(settings, Dict(kwargs))
 
     n_parameters = number_of_arguments(f) - 1 # remove one for the x
 
     if n_parameters == 0
-        error("Cannot fit to a function with only one free parameter.")
+        throw(CannotFitException("Cannot fit to a function with " *
+                                 "only one free parameter."))
     elseif n_parameters == 1
         f_fitting = f
     else
         f_fitting(x, p) = f(x, p...)
     end
 
-    Fitter(f, [], [], [], [], results, settings, f_fitting, n_parameters)
+    figure_number = 0
+    while figure_number ∈ plt.get_fignums()
+        figure_number += 1
+    end
+
+    Fitter(f, [], [], [], [], results, settings, f_fitting,
+           n_parameters, figure_number)
 end
 
 
@@ -102,7 +123,8 @@ similar calls can be chained together.
 function set_data!(fitter::Fitter, xdata, ydata, eydata)
     n_data = length(xdata)
     if length(ydata) ≠ n_data
-        error("xdata and ydata must have the same number of data")
+        throw(BadDataException("xdata and ydata must have the " *
+                               "same number of data"))
     end
 
     if length(eydata) == 1
@@ -111,12 +133,17 @@ function set_data!(fitter::Fitter, xdata, ydata, eydata)
         end
         eydata = eydata * ones(xdata)
     elseif length(eydata) ≠ n_data
-        error("eydata must be broadcastable to the size of xdata and ydata")
+        throw(BadDataException("eydata must be broadcastable to " *
+                               "the size of xdata and ydata"))
     end
 
     fitter.xdata = xdata
     fitter.ydata = ydata
     fitter.eydata = eydata
+
+    if fitter[:autoplot]
+        plot(fitter)
+    end
 
     fitter
 end
@@ -135,20 +162,31 @@ function Base.show(stream::IO, fitter::Fitter)
     end
     description *= "\n"
 
-    try
-        χ² = reduced_χ²(fitter)
-        description *= "Fit succeeded with reduced χ² = $χ². "
+    if isempty(fitter.guesses)
+        fitter.guesses = ones(fitter._n_parameters)
+    end
 
+    χ²_guess = reduced_χ²(fitter, fitter.guesses)
+    description *= "Guesses (χ² = $(χ²_guess)):\n\n"
+
+    param_names = argument_names(fitter.f)[2:end] # skip the x
+    for i = 1:fitter._n_parameters
+        description *= "\t$(rpad(param_names[i], 15)) = "
+        description *= "$(fitter.guesses[i])\n"
+    end
+    description *= "\n"
+
+    try
+        χ²_fit = reduced_χ²(fitter)
         fit_params = results(fitter).param
         fit_errors = parameter_errors(fitter)
-        description *= "Best-fit parameters:\n\n"
-        param_names = argument_names(fitter.f)[2:end] # skip the x
+        description *= "Best-fit parameters (χ² = $(χ²_fit)):\n\n"
         for i = 1:fitter._n_parameters
             description *= "\t$(rpad(param_names[i], 15)) = "
             description *= "$(fit_params[i]) ± $(fit_errors[i])\n"
         end
     catch e
-        if isa(e, ErrorException)
+        if isa(e, NoResultsException)
             description *= "Fit results not yet present."
         else
             rethrow(e)
@@ -193,7 +231,8 @@ Returns `fitter` so that similar calls can be chained together.
 """
 function fit!(fitter::Fitter; kwargs...)
     if [] ∈ (fitter.xdata, fitter.ydata, fitter.eydata)
-        error("All xdata, ydata, and eydata must be set before calling fit!.")
+        throw(BadDataException("All xdata, ydata, and eydata must be set " *
+                               "before calling fit!."))
     end
 
     if isempty(fitter.guesses)
@@ -241,7 +280,8 @@ fields `dof`, `param`, `resid`, and `jacobian`.
 """
 function results(fitter::Fitter)
     if isnull(fitter._results)
-        error("fit! must be called on fitter before results can be accessed.")
+        throw(NoResultsException("fit! must be called on fitter before " *
+                                 "results can be accessed."))
     end
 
     get(fitter._results)
@@ -276,11 +316,20 @@ end
 
 Computes the studentized residuals of the fit described by `fitter`.
 """
-function studentized_residuals(fitter::Fitter)
-    fit_results = results(fitter)
+function studentized_residuals(fitter::Fitter, params=[])
     fit_mask = data_mask(fitter)
+
+    resids = []
+    if isempty(params)
+        fit_results = results(fitter)
+        resids = -fit_results.resid
+    else
+        resids = fitter.ydata[fit_mask]
+               - apply_f(fitter, fitter.xdata[fit_mask], params)
+    end
+
     weights = 1 ./ abs(fitter.eydata[fit_mask])
-    -fit_results.resid .* weights
+    resids .* weights
 end
 
 
@@ -289,10 +338,20 @@ end
 
 Computes the reduced χ² of the fit described by `fitter`.
 """
-function reduced_χ²(fitter::Fitter)
-    squared_residuals = studentized_residuals(fitter).^2
-    # ndof = countnz(data_mask(fitter)) - fitter._n_parameters
-    ndof = results(fitter).dof
+function reduced_χ²(fitter::Fitter, params=[])
+    squared_residuals = studentized_residuals(fitter, params).^2
+
+    ndof = 0
+    try
+        ndof = results(fitter).dof
+    catch e
+        if isa(e, NoResultsException) && ~isempty(params)
+            ndof = (data_mask(fitter) |> countnz) - length(params)
+        else
+            rethrow(e)
+        end
+    end
+
     sum(squared_residuals) / ndof
 end
 
