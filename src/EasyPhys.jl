@@ -1,5 +1,5 @@
 
-VERSION >= v"0.4" && __precompile__()
+VERSION ≥ v"0.4" && __precompile__()
 
 module EasyPhys
 

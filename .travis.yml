@@ -8,3 +8,5 @@ julia:
   - nightly
 notifications:
   email: true
+install:
+  - pip install --user matplotlib
