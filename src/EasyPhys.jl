@@ -1,3 +1,6 @@
+
+VERSION >= v"0.4" && __precompile__()
+
 module EasyPhys
 
 using LsqFit
@@ -22,7 +25,7 @@ export plt,
        apply_f,
        plot
 
-function plot_fitter end
+function plot end
 
 include("utilities.jl")
 include("data.jl")
