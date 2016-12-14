@@ -6,7 +6,7 @@ The EasyPhys package is a small library written to simplify some of the tasks th
 Functionality is largely build on top of [LsqFit.jl](https://github.com/JuliaOpt/LsqFit.jl) and [PyPlot.jl](https://github.com/JuliaPy/PyPlot.jl) and has been inspired by the [Spinmob](https://github.com/Spinmob/spinmob) analysis and plotting package.
 
 Usage
-_____
+-----
 
 Fitting is provided by the `Fitter` type and by the associated methods `set_data!`
 and `fit!`.

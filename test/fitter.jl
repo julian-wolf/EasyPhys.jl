@@ -1,25 +1,25 @@
 
-f(x, a, b) = a.*x .+ b
-g(x) = x.^2
+f_test(x, a, b) = a.*x .+ b
+g_test(x) = x.^2
 
-fitter = Fitter(f)
+fitter_test = Fitter(f_test)
 
-@test_throws ErrorException Fitter(g)
-@test_throws ErrorException fit!(fitter)
-@test_throws ErrorException set_data!(fitter, [1, 2, 3], [4, 5], [1, 2, 3])
-@test_throws ErrorException results(fitter)
+@test_throws ErrorException Fitter(g_test)
+@test_throws ErrorException fit!(fitter_test)
+@test_throws ErrorException set_data!(fitter_test, [1, 2, 3], [4, 5], [1, 2, 3])
+@test_throws ErrorException results(fitter_test)
 
-xdata = [1.0,2.0,3.0,4.0]
-ydata = [0.0,1.0,3.0,5.5]
+xdata_test = [1.0, 2.0, 3.0, 4.0]
+ydata_test = [0.0, 1.0, 3.0, 5.5]
 
-set_data!(fitter, xdata, ydata, 1.0)
-@test fitter.eydata == [1.0, 1.0, 1.0, 1.0]
+set_data!(fitter_test, xdata_test, ydata_test, 1.0)
+@test fitter_test.eydata == [1.0, 1.0, 1.0, 1.0]
 
-eydata = [0.5,0.4,0.8,0.5]
+eydata_test = [0.5, 0.4, 0.8, 0.5]
 
-set_data!(fitter, xdata, ydata, eydata)
-@test fitter.eydata == eydata
+set_data!(fitter_test, xdata_test, ydata_test, eydata_test)
+@test fitter_test.eydata == eydata_test
 
-fit!(fitter)
+fit!(fitter_test)
 
 # TODO: test fitting

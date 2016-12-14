@@ -1,7 +1,7 @@
 using EasyPhys
 using Base.Test
 
-test_files = ["utilities.jl", "data.jl" "fitter.jl", "plot.jl"]
+test_files = ["utilities.jl", "fitter.jl"]
 
 println("Running tests:")
 
