@@ -2,9 +2,31 @@ module EasyPhys
 
 using LsqFit
 
-export fit # TODO: others?
+import PyPlot
+plt = PyPlot
 
-include("fitter.jl")
+import Base.getindex
+import Base.setindex!
+import Base.show
+
+export plt,
+       Fitter,
+       set!,
+       set_data!,
+       fit!,
+       results,
+       parameter_errors,
+       parameter_covariance,
+       studentized_residuals,
+       reduced_χ²,
+       apply_f,
+       plot
+
+function plot_fitter end
+
+include("utilities.jl")
 include("data.jl")
+include("fitter.jl")
+include("plot.jl")
 
 end
