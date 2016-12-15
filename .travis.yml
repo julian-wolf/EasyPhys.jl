@@ -13,7 +13,13 @@ notifications:
   email: true
 
 before_install:
-  - pip install --user matplotlib
+  - pip show matplotlib || pip install --user matplotlib
+
+script:
+  - julia -e 'Pkg.init(); Pkg.clone("EasyPhys")'
+  - julia -e 'Pkg.test("EasyPhys")'
+
+cache: pip
 
 matrix:
   allow_failures:
