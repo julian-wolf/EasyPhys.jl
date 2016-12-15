@@ -1,5 +1,5 @@
 
-import PyPlot
+using PyPlot
 plt = PyPlot
 
 
@@ -10,25 +10,25 @@ Plots the data and fitting functions associated with `fitter`. Updates the
 settings of `fitter` from the values given in `kwargs` before fitting.
 Returns the canvas.
 """
-function plt.plot(fitter::Fitter)
+function plot(fitter::Fitter)
     figure_number = 0
     if fitter._figure_number ≥ 0
         figure_number = fitter._figure_number
     else
-        while figure_number ∈ plt.get_fignums()
+        while figure_number ∈ get_fignums()
             figure_number += 1
         end
         fitter._figure_number = figure_number
     end
 
-    fig = plt.figure(fitter._figure_number)
+    fig = figure(fitter._figure_number)
 
-    ax_main = plt.subplot2grid((4, 1), (0, 0), rowspan=3)
-    plt.xscale(fitter[:xscale])
-    plt.yscale(fitter[:yscale])
+    ax_main = subplot2grid((4, 1), (0, 0), rowspan=3)
+    xscale(fitter[:xscale])
+    yscale(fitter[:yscale])
 
-    ax_resid = plt.subplot2grid((4, 1), (3, 0), rowspan=1, sharex=ax_main)
-    plt.xscale(fitter[:xscale])
+    ax_resid = subplot2grid((4, 1), (3, 0), rowspan=1, sharex=ax_main)
+    xscale(fitter[:xscale])
 
     xmin, xmax = xlims(fitter)
     xextra = 0.1 * (xmax - xmin)
@@ -41,7 +41,7 @@ function plt.plot(fitter::Fitter)
     ax_resid[:set_xlabel](fitter[:xlabel])
     ax_resid[:set_ylabel]("Studentized residuals")
     ax_main[:set_ylabel](fitter[:ylabel])
-    plt.setp(ax_main[:get_xticklabels](), visible=false)
+    setp(ax_main[:get_xticklabels](), visible=false)
 
     ax_main[:errorbar](fitter.xdata, fitter.ydata, fitter.eydata;
                        fitter[:style_data]...)

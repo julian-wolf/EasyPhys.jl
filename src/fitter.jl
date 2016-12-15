@@ -132,7 +132,7 @@ function set_data!(fitter::Fitter, xdata, ydata, eydata)
 
     if length(eydata) == 1
         if typeof(eydata) <: AbstractVector
-            eydata = eydata[1]
+            eydata = first(eydata)
         end
         eydata = eydata * ones(xdata)
     elseif length(eydata) ≠ n_data
@@ -145,7 +145,7 @@ function set_data!(fitter::Fitter, xdata, ydata, eydata)
     fitter.eydata = eydata
 
     if fitter[:autoplot]
-        plt.plot(fitter)
+        plot(fitter)
     end
 
     fitter
@@ -258,7 +258,7 @@ function fit!(fitter::Fitter; kwargs...)
                                          weights, fitter.guesses))
 
     if fitter[:autoplot]
-        plt.plot(fitter)
+        plot(fitter)
     end
 
     fitter
