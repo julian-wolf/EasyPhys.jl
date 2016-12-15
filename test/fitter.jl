@@ -9,10 +9,10 @@ fitter_test = Fitter(f_test)
 println("  - Done creating fitter.") # DELETE
 
 @test_throws EasyPhys.CannotFitException  Fitter(g_test)
-@test_throws EasyPhys.NoResultsException  results(fitter_test)
-@test_throws EasyPhys.BadDataException    fit!(fitter_test)
-@test_throws EasyPhys.BadDataException    set_data!(fitter_test, [1, 2, 3],
-                                                    [4, 5], [1, 2, 3])
+# @test_throws EasyPhys.NoResultsException  results(fitter_test)
+# @test_throws EasyPhys.BadDataException    fit!(fitter_test)
+# @test_throws EasyPhys.BadDataException    set_data!(fitter_test, [1, 2, 3],
+#                                                     [4, 5], [1, 2, 3])
 
 xdata_test = [1.0, 2.0, 3.0, 4.0]
 ydata_test = [0.0, 1.0, 3.0, 5.5]
