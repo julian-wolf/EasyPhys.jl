@@ -13,12 +13,8 @@ notifications:
   email: true
 
 before_install:
-  - pip install --upgrade pip
   - pip install --user matplotlib
 
 matrix:
   allow_failures:
     - os: linux
-  include:
-    - os: linux
-      sudo: required
