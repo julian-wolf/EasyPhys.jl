@@ -2,26 +2,26 @@
 import PyPlot
 plt = PyPlot
 
-
 """
-    plot(fitter::Fitter; kwargs...)
+    plot!(fitter::Fitter; kwargs...)
 
 Plots the data and fitting functions associated with `fitter`. Updates the
 settings of `fitter` from the values given in `kwargs` before fitting.
 Returns the canvas.
 """
-function plt.plot(fitter::Fitter)
-    figure_number = 0
-    if fitter._figure_number ≥ 0
-        figure_number = fitter._figure_number
-    else
+function plot!(fitter::Fitter; kwargs...)
+    set!(figure; kwargs...)
+
+    figure_number = fitter._figure_number
+    if figure_number < 0 || figure_number ∉ plt.get_fignums()
+        figure_number = 0
         while figure_number ∈ plt.get_fignums()
             figure_number += 1
         end
         fitter._figure_number = figure_number
     end
 
-    fig = plt.figure(fitter._figure_number)
+    fig = plt.figure(figure_number)
 
     ax_main = plt.subplot2grid((4, 1), (0, 0), rowspan=3)
     plt.xscale(fitter[:xscale])
