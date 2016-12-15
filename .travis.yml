@@ -2,21 +2,26 @@ language: julia
 
 os:
   - osx
-  - linux
+  # - linux
 
 julia:
-  - 0.4
+  # - 0.4
   - 0.5
-  - nightly
+  # - nightly
 
 notifications:
   email: false
 
+before_install:
+  - pip show matplotlib || pip install --user matplotlib
+
 script:
   - julia -e 'Pkg.init(); Pkg.clone(pwd())'
-  - julia -e 'ENV["PYTHON"]=""; Pkg.build("PyCall"); Pkg.test("EasyPhys")'
+  - julia -e 'Pkg.test("EasyPhys")'
 
-matrix:
-  allow_failures:
-    - os: linux
-    - julia: nightly
+cache: pip
+
+# matrix:
+#   allow_failures:
+#     - os: linux
+#     - julia: nightly
