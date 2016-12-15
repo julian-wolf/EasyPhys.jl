@@ -10,17 +10,13 @@ julia:
   - nightly
 
 notifications:
-  email: true
-
-before_install:
-  - pip show matplotlib || pip install --user matplotlib
+  email: false
 
 script:
-  - julia -e 'Pkg.init(); Pkg.clone("EasyPhys")'
-  - julia -e 'Pkg.test("EasyPhys")'
-
-cache: pip
+  - julia -e 'Pkg.init(); Pkg.clone(pwd())'
+  - julia -e 'ENV["PYTHON"]=""; Pkg.build("PyCall"); Pkg.test("EasyPhys")'
 
 matrix:
   allow_failures:
     - os: linux
+    - julia: nightly
