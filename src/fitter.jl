@@ -1,17 +1,23 @@
 
+using LsqFit
+
+
 type CannotFitException <: Exception
-    msg::String
+    msg::AbstractString
 end
 
 
 type BadDataException <: Exception
-    msg::String
+    msg::AbstractString
 end
 
 
 type NoResultsException <: Exception
-    msg::String
+    msg::AbstractString
 end
+
+
+function plot end
 
 
 """
@@ -265,7 +271,7 @@ can be chained together.
 """
 function fit!(fitter::Fitter, p0; kwargs...)
     fitter.guesses = p0
-    fit!(fitter, kwargs)
+    fit!(fitter; kwargs)
 end
 
 

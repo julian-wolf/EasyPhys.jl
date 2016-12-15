@@ -1,27 +1,24 @@
 
-"""
-    number_of_arguments(method::Function)
-
-Gives the number of arguments taken by `method`. Requires that
-`method` is the only method belonging to its generic function.
-"""
-function number_of_arguments(method::Function)
-    fmethods = methods(method).ms
+function _getmethod(m::Function)
+    fmethods = methods(m).ms
     @assert length(fmethods) == 1
-
-    length(fmethods[1].sig.parameters) - 1
+    fmethods[1]
 end
 
 
 """
-    argument_names(method::Function)
+    number_of_arguments(m::Function)
 
-Gives the original names of all arguments taken by `method`. Requires
-that `method` is the only method belonging to its generic function.
+Gives the number of arguments taken by `m`. Requires that
+`m` is the only method belonging to its generic function.
 """
-function argument_names(method::Function)
-    fmethods = methods(method).ms
-    @assert length(fmethods) == 1
+number_of_arguments(m::Function) = length(_getmethod(m).sig.parameters) - 1
 
-    fmethods[1].lambda_template.slotnames[2:end]
-end
+
+"""
+    argument_names(m::Function)
+
+Gives the original names of all arguments taken by `m`. Requires
+that `m` is the only method belonging to its generic function.
+"""
+argument_names(m::Function) = _getmethod(m).lambda_template.slotnames[2:end]

@@ -3,11 +3,6 @@ VERSION ≥ v"0.4" && __precompile__()
 
 module EasyPhys
 
-using LsqFit
-
-import PyPlot
-plt = PyPlot
-
 import Base.getindex
 import Base.setindex!
 import Base.show
@@ -24,8 +19,6 @@ export plt,
        reduced_χ²,
        apply_f,
        plot
-
-function plot end
 
 include("utilities.jl")
 include("data.jl")

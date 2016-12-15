@@ -5,23 +5,18 @@ os:
   - linux
 
 julia:
-  # - 0.4
+  - 0.4
   - 0.5
-  # - nightly
+  - nightly
 
 notifications:
   email: false
 
-before_install:
-  - pip show matplotlib || pip install --user matplotlib
-
 script:
-  - julia -e 'Pkg.init(); Pkg.clone(pwd())'
+  - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.update()'
   - julia -e 'Pkg.test("EasyPhys")'
 
-cache: pip
-
-# matrix:
-#   allow_failures:
-#     - os: linux
-#     - julia: nightly
+matrix:
+  allow_failures:
+    - os: linux
+    - julia: nightly
