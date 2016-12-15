@@ -13,7 +13,8 @@ notifications:
 
 script:
   - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.update()'
-  - julia -e 'Pkg.test("EasyPhys")'
+  - ENV["PYTHON"]=""; Pkg.build("PyCall"); using PyPlot;
+  - julia -e 'Pkg.test("EasyPhys", coverage=true)'
 
 matrix:
   allow_failures:
