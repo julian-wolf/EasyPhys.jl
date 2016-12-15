@@ -17,8 +17,7 @@ export plt,
        parameter_covariance,
        studentized_residuals,
        reduced_χ²,
-       apply_f,
-       plot
+       apply_f
 
 include("utilities.jl")
 include("data.jl")

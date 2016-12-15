@@ -17,9 +17,6 @@ type NoResultsException <: Exception
 end
 
 
-function plot end
-
-
 """
 Describes a set of data and a model to be fit to.
 """
@@ -117,6 +114,9 @@ function set!(fitter::Fitter; kwargs...)
 end
 
 
+set!(; kwargs...) = (fitter::Fitter) -> set!(fitter; kwargs...)
+
+
 """
     set_data!(fitter::Fitter, xdata, ydata, eydata)
 
@@ -145,11 +145,15 @@ function set_data!(fitter::Fitter, xdata, ydata, eydata)
     fitter.eydata = eydata
 
     if fitter[:autoplot]
-        plot(fitter)
+        plt.plot(fitter)
     end
 
     fitter
 end
+
+
+set_data!(xdata, ydata, eydata) =
+    (fitter::Fitter) -> set_data!(fitter, xdata, ydata, eydata)
 
 
 setindex!(fitter::Fitter, val, key) = fitter._settings[key] = val
@@ -242,7 +246,7 @@ function fit!(fitter::Fitter; kwargs...)
         fitter.guesses = ones(fitter._n_parameters)
     end
 
-    set!(fitter, kwargs...)
+    set!(fitter; kwargs...)
 
     fit_mask = data_mask(fitter)
     xdata_fit = fitter.xdata[fit_mask]
@@ -254,7 +258,7 @@ function fit!(fitter::Fitter; kwargs...)
                                          weights, fitter.guesses))
 
     if fitter[:autoplot]
-        plot(fitter)
+        plt.plot(fitter)
     end
 
     fitter

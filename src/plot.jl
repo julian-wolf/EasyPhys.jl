@@ -1,4 +1,8 @@
 
+import PyPlot
+plt = PyPlot
+
+
 """
     plot(fitter::Fitter; kwargs...)
 
@@ -6,7 +10,7 @@ Plots the data and fitting functions associated with `fitter`. Updates the
 settings of `fitter` from the values given in `kwargs` before fitting.
 Returns the canvas.
 """
-function plot(fitter::Fitter)
+function plt.plot(fitter::Fitter)
     figure_number = 0
     if fitter._figure_number ≥ 0
         figure_number = fitter._figure_number
@@ -26,9 +30,7 @@ function plot(fitter::Fitter)
     ax_resid = plt.subplot2grid((4, 1), (3, 0), rowspan=1, sharex=ax_main)
     plt.xscale(fitter[:xscale])
 
-    xmin = is(fitter[:xmin], nothing) ? minimum(fitter.xdata) : fitter[:xmin]
-    xmax = is(fitter[:xmax], nothing) ? maximum(fitter.xdata) : fitter[:xmax]
-
+    xmin, xmax = xlims(fitter)
     xextra = 0.1 * (xmax - xmin)
 
     xmin -= xextra

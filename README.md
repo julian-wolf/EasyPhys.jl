@@ -7,6 +7,9 @@ Functionality is largely build on top of [LsqFit.jl](https://github.com/JuliaOpt
 
 [![Build Status](https://travis-ci.org/julian-wolf/EasyPhys.jl.svg)](https://travis-ci.org/julian-wolf/EasyPhys.jl)
 
+[![EasyPhys](http://pkg.julialang.org/badges/EasyPhys_0.4.svg)](http://pkg.julialang.org/?pkg=EasyPhys&ver=0.5)
+[![EasyPhys](http://pkg.julialang.org/badges/EasyPhys_0.6.svg)](http://pkg.julialang.org/?pkg=EasyPhys&ver=0.6)
+
 Usage
 -----
 
