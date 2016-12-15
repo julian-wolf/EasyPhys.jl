@@ -145,7 +145,7 @@ function set_data!(fitter::Fitter, xdata, ydata, eydata)
     fitter.eydata = eydata
 
     if fitter[:autoplot]
-        plot(fitter)
+        plt.plot(fitter)
     end
 
     fitter
@@ -258,7 +258,7 @@ function fit!(fitter::Fitter; kwargs...)
                                          weights, fitter.guesses))
 
     if fitter[:autoplot]
-        plot(fitter)
+        plt.plot(fitter)
     end
 
     fitter
