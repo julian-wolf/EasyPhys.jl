@@ -89,10 +89,7 @@ function Fitter(f::Function; kwargs...)
         f_fitting(x, p) = f(x, p...)
     end
 
-    figure_number = 0
-    while figure_number ∈ plt.get_fignums()
-        figure_number += 1
-    end
+    figure_number = -1
 
     Fitter(f, [], [], [], [], results, settings, f_fitting,
            n_parameters, figure_number)

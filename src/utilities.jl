@@ -23,5 +23,5 @@ function argument_names(method::Function)
     fmethods = methods(method).ms
     @assert length(fmethods) == 1
 
-    methods(method).ms[1].lambda_template.slotnames[2:end]
+    fmethods[1].lambda_template.slotnames[2:end]
 end

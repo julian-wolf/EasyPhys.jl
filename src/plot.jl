@@ -7,6 +7,16 @@ settings of `fitter` from the values given in `kwargs` before fitting.
 Returns the canvas.
 """
 function plot(fitter::Fitter)
+    figure_number = 0
+    if fitter._figure_number ≥ 0
+        figure_number = fitter._figure_number
+    else
+        while figure_number ∈ plt.get_fignums()
+            figure_number += 1
+        end
+        fitter._figure_number = figure_number
+    end
+
     fig = plt.figure(fitter._figure_number)
 
     ax_main = plt.subplot2grid((4, 1), (0, 0), rowspan=3)
