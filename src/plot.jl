@@ -10,7 +10,7 @@ settings of `fitter` from the values given in `kwargs` before fitting.
 Returns the canvas.
 """
 function plot!(fitter::Fitter; kwargs...)
-    set!(figure; kwargs...)
+    set!(fitter; kwargs...)
 
     figure_number = fitter._figure_number
     if figure_number < 0 || figure_number ∉ plt.get_fignums()
@@ -46,26 +46,26 @@ function plot!(fitter::Fitter; kwargs...)
     ax_main[:errorbar](fitter.xdata, fitter.ydata, fitter.eydata;
                        fitter[:style_data]...)
 
+    if fitter[:plot_curve] || fitter[:plot_guess]
+        x_plot = linspace(xmin, xmax, fitter[:fpoints])
+    end
+
+    if fitter[:plot_guess]
+        y_guess = apply_f(fitter, x_plot, fitter.guesses)
+        ax_main[:plot](x_plot, y_guess; fitter[:style_guess]...)
+    end
+
     try
         residuals = studentized_residuals(fitter)
 
         ax_resid[:errorbar](fitter.xdata, residuals, ones(fitter.xdata);
-                          fitter[:style_data]...)
-
-        if fitter[:plot_curve] || fitter[:plot_guess]
-            x_plot = linspace(xmin, xmax, fitter[:fpoints])
-        end
+                            fitter[:style_data]...)
 
         if fitter[:plot_curve]
             y_curve = apply_f(fitter, x_plot)
             ax_main[:plot](x_plot, y_curve; fitter[:style_fit]...)
             ax_resid[:plot]([xmin, xmax], [0, 0];
-                          fitter[:style_fit]...)
-        end
-
-        if fitter[:plot_guess]
-            y_guess = apply_f(fitter, x_plot, fitter.guesses)
-            ax_main[:plot](x_plot, y_guess; fitter[:style_guess]...)
+                            fitter[:style_fit]...)
         end
     catch e
         if isa(e, NoResultsException)

@@ -61,6 +61,7 @@ end
 Creates a new Fitter object with model function `f`.
 """
 function Fitter(f::Function; kwargs...)
+
     results = Nullable{LsqFit.LsqFitResult}()
 
     settings = Dict{Symbol, Any}(
@@ -94,7 +95,9 @@ function Fitter(f::Function; kwargs...)
 
     figure_number = -1
 
-    Fitter(f, [], [], [], [], results, settings, f_fitting,
+    guesses = ones(n_parameters)
+
+    Fitter(f, [], [], [], guesses, results, settings, f_fitting,
            n_parameters, figure_number)
 end
 
@@ -169,10 +172,6 @@ function Base.show(stream::IO, fitter::Fitter)
     end
     description *= "\n"
 
-    if isempty(fitter.guesses)
-        fitter.guesses = ones(fitter._n_parameters)
-    end
-
     χ²_guess = reduced_χ²(fitter, fitter.guesses)
     description *= "Guesses (χ² = $(χ²_guess)):\n\n"
 
@@ -242,10 +241,6 @@ function fit!(fitter::Fitter; kwargs...)
                                "before calling fit!."))
     end
 
-    if isempty(fitter.guesses)
-        fitter.guesses = ones(fitter._n_parameters)
-    end
-
     set!(fitter; kwargs...)
 
     fit_mask = data_mask(fitter)
@@ -275,7 +270,7 @@ can be chained together.
 """
 function fit!(fitter::Fitter, p0; kwargs...)
     fitter.guesses = p0
-    fit!(fitter; kwargs)
+    fit!(fitter; kwargs...)
 end
 
 
@@ -324,19 +319,20 @@ end
 Computes the studentized residuals of the fit described by `fitter`.
 """
 function studentized_residuals(fitter::Fitter, params=[])
-    fit_mask = data_mask(fitter)
 
     resids = []
     if isempty(params)
         fit_results = results(fitter)
         resids = -fit_results.resid
     else
+        fit_mask = data_mask(fitter)
+        weights = 1 ./ abs(fitter.eydata[fit_mask])
         resids = fitter.ydata[fit_mask]
                - apply_f(fitter, fitter.xdata[fit_mask], params)
+        resids .*= weights
     end
 
-    weights = 1 ./ abs(fitter.eydata[fit_mask])
-    resids .* weights
+    resids
 end
 
 

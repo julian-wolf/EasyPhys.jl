@@ -5,10 +5,11 @@ The EasyPhys package is a small library written to simplify some of the tasks th
 
 Functionality is largely build on top of [LsqFit.jl](https://github.com/JuliaOpt/LsqFit.jl) and [PyPlot.jl](https://github.com/JuliaPy/PyPlot.jl) and has been inspired by the [Spinmob](https://github.com/Spinmob/spinmob) analysis and plotting package.
 
-[![Build Status](https://travis-ci.org/julian-wolf/EasyPhys.jl.svg)](https://travis-ci.org/julian-wolf/EasyPhys.jl)
-
 [![EasyPhys](http://pkg.julialang.org/badges/EasyPhys_0.4.svg)](http://pkg.julialang.org/?pkg=EasyPhys&ver=0.5)
 [![EasyPhys](http://pkg.julialang.org/badges/EasyPhys_0.6.svg)](http://pkg.julialang.org/?pkg=EasyPhys&ver=0.6)
+
+[![Build Status](https://travis-ci.org/julian-wolf/EasyPhys.jl.svg)](https://travis-ci.org/julian-wolf/EasyPhys.jl)
+[![Coverage Status](https://coveralls.io/repos/github/julian-wolf/EasyPhys.jl/badge.svg?branch=master)](https://coveralls.io/github/julian-wolf/EasyPhys.jl?branch=master)
 
 Usage
 -----
@@ -18,9 +19,11 @@ and `fit!`.
 
     julia> using EasyPhys
 
-    julia> fitter = Fitter((x, a, b) -> a .* x .+ b);
+    julia> model(x, a, b) = a * exp(-b * x)
 
-    julia> set_data!(fitter, [1, 2, 3, 4], [0, 1, 3, 5], [0.5, 0.4, 0.8, 0.5]) |> fit!
+    julia> xdata = linspace(0,10,100); ydata = model(xdata, 1.0, 2.0) + 0.01*randn(length(xdata)); eydata = 0.01;
+
+    julia> fitter = Fitter(model) |> set_data!(xdata, ydata, eydata) |> fit!
 
 TODO
 ----
