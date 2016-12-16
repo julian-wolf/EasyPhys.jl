@@ -1,4 +1,5 @@
 
+import PyCall
 import PyPlot
 plt = PyPlot
 
@@ -43,8 +44,21 @@ function plot!(fitter::Fitter; kwargs...)
     ax_main[:set_ylabel](fitter[:ylabel])
     plt.setp(ax_main[:get_xticklabels](), visible=false)
 
-    ax_main[:errorbar](fitter.xdata, fitter.ydata, fitter.eydata;
+    fit_mask = data_mask(fitter)
+
+    xdata_included = fitter.xdata[fit_mask]
+    ydata_included = fitter.ydata[fit_mask]
+    eydata_included = fitter.eydata[fit_mask]
+
+    ax_main[:errorbar](xdata_included, ydata_included, eydata_included;
                        fitter[:style_data]...)
+
+    xdata_excluded = fitter.xdata[~fit_mask]
+    ydata_excluded = fitter.ydata[~fit_mask]
+    eydata_excluded = fitter.eydata[~fit_mask]
+
+    ax_main[:errorbar](xdata_excluded, ydata_excluded, eydata_excluded;
+                       fitter[:style_outliers]...)
 
     if fitter[:plot_curve] || fitter[:plot_guess]
         x_plot = linspace(xmin, xmax, fitter[:fpoints])
@@ -58,8 +72,19 @@ function plot!(fitter::Fitter; kwargs...)
     try
         residuals = studentized_residuals(fitter)
 
-        ax_resid[:errorbar](fitter.xdata, residuals, ones(fitter.xdata);
-                            fitter[:style_data]...)
+        try
+            ax_resid[:errorbar](xdata_included, residuals,
+                                ones(xdata_included); fitter[:style_data]...)
+        catch e
+            if isa(e, PyCall.PyError)
+                warn("""
+                        Length of xdata does not match length of residuals.
+                        `fit!` must be called after calling `apply_mask!` or
+                        `ignore_residuals!` in order to update residuals.""")
+            else
+                rethrow(e)
+            end
+        end
 
         if fitter[:plot_curve]
             y_curve = apply_f(fitter, x_plot)
@@ -69,7 +94,7 @@ function plot!(fitter::Fitter; kwargs...)
         end
     catch e
         if isa(e, NoResultsException)
-            println(e.msg)
+            warn(e.msg)
         else
             rethrow(e)
         end

@@ -37,6 +37,9 @@ type Fitter
     "Initial guesses for the best-fit parameters."
     guesses::Array{Float64, 1}
 
+    "Datapoints to be ignored when fitting."
+    _outliers::BitArray{1}
+
     "Results of the least-squares optimization."
     _results::Nullable{LsqFit.LsqFitResult{Float64}}
 
@@ -65,19 +68,20 @@ function Fitter(f::Function; kwargs...)
     results = Nullable{LsqFit.LsqFitResult}()
 
     settings = Dict{Symbol, Any}(
-            :autoplot    => true,
-            :xscale      => "linear",
-            :yscale      => "linear",
-            :plot_curve  => true,
-            :plot_guess  => true,
-            :fpoints     => 1000,
-            :xmin        => nothing,
-            :xmax        => nothing,
-            :xlabel      => "x",
-            :ylabel      => "f(x)",
-            :style_data  => Dict(:marker => "+", :color => "b", :ls => ""),
-            :style_fit   => Dict(:marker => "",  :color => "r", :ls => "-"),
-            :style_guess => Dict(:marker => "",  :color => "k", :ls => "--")
+            :autoplot        => true,
+            :xscale          => "linear",
+            :yscale          => "linear",
+            :plot_curve      => true,
+            :plot_guess      => true,
+            :fpoints         => 1000,
+            :xmin            => nothing,
+            :xmax            => nothing,
+            :xlabel          => "x",
+            :ylabel          => "f(x)",
+            :style_data      => Dict(:marker => "+", :color => "b",   :ls => ""),
+            :style_outliers  => Dict(:marker => "+", :color => "0.5", :ls => ""),
+            :style_fit       => Dict(:marker => "",  :color => "r",   :ls => "-"),
+            :style_guess     => Dict(:marker => "",  :color => "k",   :ls => "--")
         )
 
     merge!(settings, Dict(kwargs))
@@ -95,9 +99,11 @@ function Fitter(f::Function; kwargs...)
 
     figure_number = -1
 
+    outliers = BitArray{1}()
+
     guesses = ones(n_parameters)
 
-    Fitter(f, [], [], [], guesses, results, settings, f_fitting,
+    Fitter(f, [], [], [], guesses, outliers, results, settings, f_fitting,
            n_parameters, figure_number)
 end
 
@@ -143,6 +149,8 @@ function set_data!(fitter::Fitter, xdata, ydata, eydata)
                                "the size of xdata and ydata"))
     end
 
+    fitter._outliers = BitArray{1}(repeat([false], outer=n_data))
+
     fitter.xdata = xdata
     fitter.ydata = ydata
     fitter.eydata = eydata
@@ -157,6 +165,40 @@ end
 
 set_data!(xdata, ydata, eydata) =
     (fitter::Fitter) -> set_data!(fitter, xdata, ydata, eydata)
+
+
+"""
+    apply_mask!(fitter::Fitter, mask::BitArray{1})
+
+Applies `mask` to the data associated with `fitter`. Returns `fitter`
+so that similar calls can be chained together.
+"""
+function apply_mask!(fitter::Fitter, mask::BitArray{1})
+    fitter._outliers = ~mask
+
+    if fitter[:autoplot]
+        plot!(fitter)
+    end
+
+    fitter
+end
+
+
+apply_mask!(mask::BitArray{1}) = (fitter::Fitter) -> apply_mask!(fitter, mask)
+
+
+"""
+    ignore_outliers!(fitter::Fitter, max_studentized_residual=10, params=[])
+
+Ignores outlying datapoints associated with `fitter`, defined as those points
+the studentized residuals of which are larger than `max_studentized_residual`
+when the model function is evaluated with `params`. If no `params` are
+provided, uses fit results.
+"""
+function ignore_outliers!(fitter::Fitter, max_studentized_residual=10, params=[])
+    outliers = abs(studentized_residuals(fitter, params)) .> max_studentized_residual
+    fitter |> apply_mask!(~outliers)
+end
 
 
 setindex!(fitter::Fitter, val, key) = fitter._settings[key] = val
@@ -219,12 +261,12 @@ end
     data_mask(fitter::Fitter)
 
 Returns a mask indexing data which are within the fitting limits of `fitter`,
-as determined by `fitter[:xmin]` and `fitter[:xmax]`.
+as determined by `fitter[:xmin]` and `fitter[:xmax]` as well as any outliers.
 """
 function data_mask(fitter::Fitter)
     xmin, xmax = xlims(fitter)
 
-    xmin .<= fitter.xdata .<= xmax
+    (xmin .<= fitter.xdata .<= xmax) & ~fitter._outliers
 end
 
 
