@@ -111,10 +111,12 @@ end
 """
     set!(fitter::Fitter; kwargs...)
 
+    (fitter::Fitter) |> set!(; kwargs...)
+
 Updates the settings of `fitter` from the values given in `kwargs`.
 Returns `fitter` so that similar calls can be chained together.
 """
-function set!(fitter::Fitter; kwargs...)
+@partially_applicable function set!(fitter::Fitter; kwargs...)
     for (k, v) in kwargs
         fitter._settings[k] = v
     end
@@ -123,16 +125,15 @@ function set!(fitter::Fitter; kwargs...)
 end
 
 
-set!(; kwargs...) = (fitter::Fitter) -> set!(fitter; kwargs...)
-
-
 """
     set_data!(fitter::Fitter, xdata, ydata, eydata)
+
+    (fitter::Fitter) |> set_data!(xdata, ydata, eydata)
 
 Updates the data associated with `fitter`. Returns `fitter` so that
 similar calls can be chained together.
 """
-function set_data!(fitter::Fitter, xdata, ydata, eydata)
+@partially_applicable function set_data!(fitter::Fitter, xdata, ydata, eydata)
     n_data = length(xdata)
     if length(ydata) ≠ n_data
         throw(BadDataException("xdata and ydata must have the " *
@@ -163,17 +164,15 @@ function set_data!(fitter::Fitter, xdata, ydata, eydata)
 end
 
 
-set_data!(xdata, ydata, eydata) =
-    (fitter::Fitter) -> set_data!(fitter, xdata, ydata, eydata)
-
-
 """
     apply_mask!(fitter::Fitter, mask::BitArray{1})
+
+    (fitter::Fitter) |> apply_mask!(mask::BitArray{1})
 
 Applies `mask` to the data associated with `fitter`. Returns `fitter`
 so that similar calls can be chained together.
 """
-function apply_mask!(fitter::Fitter, mask::BitArray{1})
+@partially_applicable function apply_mask!(fitter::Fitter, mask::BitArray{1})
     fitter._outliers = ~mask
 
     if fitter[:autoplot]
@@ -184,19 +183,19 @@ function apply_mask!(fitter::Fitter, mask::BitArray{1})
 end
 
 
-apply_mask!(mask::BitArray{1}) = (fitter::Fitter) -> apply_mask!(fitter, mask)
-
-
 """
-    ignore_outliers!(fitter::Fitter, max_studentized_residual=10, params=[])
+    ignore_outliers!(fitter::Fitter, max_residual=10, params=[])
+
+    (fitter::Fitter) |> ignore_outliers!(max_residual=10, params=[])
 
 Ignores outlying datapoints associated with `fitter`, defined as those points
-the studentized residuals of which are larger than `max_studentized_residual`
-when the model function is evaluated with `params`. If no `params` are
-provided, uses fit results.
+the studentized residuals of which are larger than `max_residual` when the
+model function is evaluated with `params`. If no `params` are provided, uses
+fit results.
 """
-function ignore_outliers!(fitter::Fitter, max_studentized_residual=10, params=[])
-    outliers = abs(studentized_residuals(fitter, params)) .> max_studentized_residual
+@partially_applicable function ignore_outliers!(
+        fitter::Fitter, max_residual=10, params=[])
+    outliers = abs(studentized_residuals(fitter, params)) .> max_residual
     fitter |> apply_mask!(~outliers)
 end
 
@@ -271,19 +270,35 @@ end
 
 
 """
+    fit!(fitter::Fitter, guesses; kwargs...)
+
     fit!(fitter::Fitter; kwargs...)
+
+    (fitter::Fitter) |> fit!(guesses; kwargs...)
+
+    (fitter::Fitter) |> fit!(; kwargs...)
 
 Fits the model function of `fitter` to the associated data. Updates the
 settings of `fitter` from the values given in `kwargs` before fitting.
-Returns `fitter` so that similar calls can be chained together.
+If provided, `guesses` are used as the initial guesses for the parameters
+being fit to. Returns `fitter` so that similar calls can be chained together.
 """
-function fit!(fitter::Fitter; kwargs...)
+@partially_applicable function fit!(fitter::Fitter, guesses=nothing; kwargs...)
     if [] ∈ (fitter.xdata, fitter.ydata, fitter.eydata)
         throw(BadDataException("All xdata, ydata, and eydata must be set " *
                                "before calling fit!."))
     end
 
     set!(fitter; kwargs...)
+
+    if guesses ≠ nothing
+        if length(guesses) == (len = length(fitter.guesses))
+            fitter.guesses = guesses
+        else
+            warn("If supplied, `guesses` must be of length $(len). " *
+                 "Using old guesses.")
+        end
+    end
 
     fit_mask = data_mask(fitter)
     xdata_fit = fitter.xdata[fit_mask]
@@ -299,20 +314,6 @@ function fit!(fitter::Fitter; kwargs...)
     end
 
     fitter
-end
-
-
-"""
-    fit!(fitter::Fitter, p0; kwargs...)
-
-Fits the model function of `fitter` to the associated data using initial
-parameter guesses `p0`. Updates the settings of `fitter` from the values
-given in `kwargs` before fitting. Returns `fitter` so that similar calls
-can be chained together.
-"""
-function fit!(fitter::Fitter, p0; kwargs...)
-    fitter.guesses = p0
-    fit!(fitter; kwargs...)
 end
 
 
@@ -403,6 +404,7 @@ end
 
 """
     apply_f(fitter::Fitter, x)
+
     apply_f(fitter::Fitter, x, params)
 
 Applies the model function of `fitter` at points `x` using parameters `params`.

@@ -6,6 +6,7 @@ module EasyPhys
 import Base.getindex
 import Base.setindex!
 import Base.show
+import Base.@__doc__
 
 export plt,
        Fitter,
