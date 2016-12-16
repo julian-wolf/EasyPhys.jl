@@ -15,7 +15,7 @@ fitter_test = Fitter(f_test; autoplot=false)
 end
 
 @testset "fitter.jl `fit!` and friends" begin
-    tolerance_test = 0.05
+    tolerance_test = 0.08
     outlier_threshold_test = 2
 
     model_test(x, a, b) = a*exp(-x*b)
