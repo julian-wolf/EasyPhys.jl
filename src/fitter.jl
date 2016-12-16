@@ -91,11 +91,9 @@ function Fitter(f::Function; kwargs...)
     if n_parameters == 0
         throw(CannotFitException("Cannot fit to a function with " *
                                  "only one free parameter."))
-    elseif n_parameters == 1
-        f_fitting = f
-    else
-        f_fitting(x, p) = f(x, p...)
     end
+
+    f_fitting(x, p) = f(x, p...)
 
     figure_number = -1
 
@@ -105,6 +103,50 @@ function Fitter(f::Function; kwargs...)
 
     Fitter(f, [], [], [], guesses, outliers, results, settings, f_fitting,
            n_parameters, figure_number)
+end
+
+
+setindex!(fitter::Fitter, val, key) = fitter._settings[key] = val
+
+
+getindex(fitter::Fitter, key) = fitter._settings[key]
+
+
+function show(stream::IO, fitter::Fitter)
+    description = "EasyPhys.Fitter with the following settings:\n\n"
+    for (k, v) in fitter._settings
+        description *= "\t$(rpad(k, 15)) => $(repr(v))\n"
+    end
+    description *= "\n"
+
+    χ²_guess = reduced_χ²(fitter, fitter.guesses)
+    description *= "Guesses (χ² = $(χ²_guess)):\n\n"
+
+    param_names = argument_names(fitter.f)[2:end] # skip the x
+    for i = 1:fitter._n_parameters
+        description *= "\t$(rpad(param_names[i], 15)) = "
+        description *= "$(fitter.guesses[i])\n"
+    end
+    description *= "\n"
+
+    try
+        χ²_fit = reduced_χ²(fitter)
+        fit_params = results(fitter).param
+        fit_errors = parameter_errors(fitter)
+        description *= "Best-fit parameters (χ² = $(χ²_fit)):\n\n"
+        for i = 1:fitter._n_parameters
+            description *= "\t$(rpad(param_names[i], 15)) = "
+            description *= "$(fit_params[i]) ± $(fit_errors[i])\n"
+        end
+    catch e
+        if isa(e, NoResultsException)
+            description *= "Fit results not yet present."
+        else
+            rethrow(e)
+        end
+    end
+
+    write(stream, description)
 end
 
 
@@ -118,7 +160,7 @@ Returns `fitter` so that similar calls can be chained together.
 """
 @partially_applicable function set!(fitter::Fitter; kwargs...)
     for (k, v) in kwargs
-        fitter._settings[k] = v
+        fitter[k] = v
     end
 
     fitter
@@ -140,10 +182,7 @@ similar calls can be chained together.
                                "same number of data"))
     end
 
-    if length(eydata) == 1
-        if typeof(eydata) <: AbstractVector
-            eydata = first(eydata)
-        end
+    if typeof(eydata) <: Number
         eydata = eydata * ones(xdata)
     elseif length(eydata) ≠ n_data
         throw(BadDataException("eydata must be broadcastable to " *
@@ -197,50 +236,6 @@ fit results.
         fitter::Fitter, max_residual=10, params=[])
     outliers = abs(studentized_residuals(fitter, params)) .> max_residual
     fitter |> apply_mask!(~outliers)
-end
-
-
-setindex!(fitter::Fitter, val, key) = fitter._settings[key] = val
-
-
-getindex(fitter::Fitter, key) = fitter._settings[key]
-
-
-function Base.show(stream::IO, fitter::Fitter)
-    description = "EasyPhys.Fitter with the following settings:\n\n"
-    for (k, v) in fitter._settings
-        description *= "\t$(rpad(k, 15)) => $(repr(v))\n"
-    end
-    description *= "\n"
-
-    χ²_guess = reduced_χ²(fitter, fitter.guesses)
-    description *= "Guesses (χ² = $(χ²_guess)):\n\n"
-
-    param_names = argument_names(fitter.f)[2:end] # skip the x
-    for i = 1:fitter._n_parameters
-        description *= "\t$(rpad(param_names[i], 15)) = "
-        description *= "$(fitter.guesses[i])\n"
-    end
-    description *= "\n"
-
-    try
-        χ²_fit = reduced_χ²(fitter)
-        fit_params = results(fitter).param
-        fit_errors = parameter_errors(fitter)
-        description *= "Best-fit parameters (χ² = $(χ²_fit)):\n\n"
-        for i = 1:fitter._n_parameters
-            description *= "\t$(rpad(param_names[i], 15)) = "
-            description *= "$(fit_params[i]) ± $(fit_errors[i])\n"
-        end
-    catch e
-        if isa(e, NoResultsException)
-            description *= "Fit results not yet present."
-        else
-            rethrow(e)
-        end
-    end
-
-    write(stream, description)
 end
 
 
@@ -362,6 +357,10 @@ end
 Computes the studentized residuals of the fit described by `fitter`.
 """
 function studentized_residuals(fitter::Fitter, params=[])
+    if [] ∈ (fitter.xdata, fitter.ydata, fitter.eydata)
+        throw(BadDataException("All xdata, ydata, and eydata must be set " *
+                               "in order to calculate residuals."))
+    end
 
     resids = []
     if isempty(params)
@@ -407,11 +406,13 @@ end
 
     apply_f(fitter::Fitter, x, params)
 
+    (fitter::Fitter) |> apply_f(x)
+
 Applies the model function of `fitter` at points `x` using parameters `params`.
 If no `params` is supplied and fit! has been called, defaults to using the
 best-fit parameters.
 """
-function apply_f(fitter::Fitter, x, params=[])
+@partially_applicable function apply_f(fitter::Fitter, x, params=[])
     if isempty(params)
         fit_results = results(fitter)
         params = fit_results.param
