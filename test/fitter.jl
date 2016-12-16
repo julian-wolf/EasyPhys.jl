@@ -6,26 +6,38 @@ g_test(x) = x.^2
 
 fitter_test = Fitter(f_test; autoplot=false)
 
-@test_throws EasyPhys.CannotFitException  Fitter(g_test)
-@test_throws EasyPhys.NoResultsException  results(fitter_test)
-@test_throws EasyPhys.BadDataException    fit!(fitter_test)
-@test_throws EasyPhys.BadDataException    set_data!(fitter_test, [1, 2, 3],
-                                                    [4, 5], [1, 2, 3])
+@testset "fitter.jl exceptions" begin
+    @test_throws EasyPhys.CannotFitException  Fitter(g_test)
+    @test_throws EasyPhys.NoResultsException  results(fitter_test)
+    @test_throws EasyPhys.BadDataException    fit!(fitter_test)
+    @test_throws EasyPhys.BadDataException    set_data!(fitter_test, [1, 2, 3],
+                                                        [4, 5], [1, 2, 3])
+end
 
-xdata_test = [1.0, 2.0, 3.0, 4.0]
-ydata_test = [0.0, 1.0, 3.0, 5.5]
+@testset "fitter.jl `fit!` and friends" begin
+    tolerance_test = 0.05
+    outlier_threshold_test = 2
 
-set_data!(fitter_test, xdata_test, ydata_test, 1.0)
-@test fitter_test.eydata == [1.0, 1.0, 1.0, 1.0]
+    model_test(x, a, b) = a*exp(-x*b)
 
-eydata_test = [0.5, 0.4, 0.8, 0.5]
+    xdata_test = linspace(0,10,100)
+    eydata_test = 0.01;
 
-set_data!(fitter_test, xdata_test, ydata_test, eydata_test)
-@test fitter_test.eydata == eydata_test
+    for a in 1:10:91, b in 1:10
+        ydata_test = model_test(xdata_test, a, b) + 0.01*randn(length(xdata_test))
 
-# skipping this for now; I can't figure out what version of LsqFit travis is using
-# fit!(fitter_test)
+        fitter_test = Fitter(model_test; autoplot=false)
 
-# TODO: test fitting
+        set_data!(fitter_test, xdata_test, ydata_test, eydata_test) |> fit!
+        χ²_worse_test = reduced_χ²(fitter_test)
+
+        @test all(abs(results(fitter_test).param .- [a, b]) ./ [a, b] .<= tolerance_test)
+
+        ignore_outliers!(fitter_test, outlier_threshold_test) |> fit!
+        χ²_better_test = reduced_χ²(fitter_test)
+
+        @test χ²_worse_test >= χ²_worse_test
+    end
+end
 
 end
