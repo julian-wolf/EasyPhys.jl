@@ -119,8 +119,16 @@ function show(stream::IO, fitter::Fitter)
     end
     description *= "\n"
 
-    χ²_guess = reduced_χ²(fitter, fitter.guesses)
-    description *= "Guesses (χ² = $(χ²_guess)):\n\n"
+    try
+        χ²_guess = reduced_χ²(fitter, fitter.guesses)
+        description *= "Guesses (χ² = $(χ²_guess)):\n\n"
+    catch e
+        if isa(e, BadDataException)
+            description *= "Guesses:\n\n"
+        else
+            rethrow(e)
+        end
+    end
 
     param_names = argument_names(fitter.f)[2:end] # skip the x
     for i = 1:fitter._n_parameters
@@ -130,9 +138,9 @@ function show(stream::IO, fitter::Fitter)
     description *= "\n"
 
     try
-        χ²_fit = reduced_χ²(fitter)
         fit_params = results(fitter).param
         fit_errors = parameter_errors(fitter)
+        χ²_fit = reduced_χ²(fitter)
         description *= "Best-fit parameters (χ² = $(χ²_fit)):\n\n"
         for i = 1:fitter._n_parameters
             description *= "\t$(rpad(param_names[i], 15)) = "

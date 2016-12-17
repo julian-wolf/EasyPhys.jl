@@ -26,6 +26,7 @@ end
     eydata_test = 0.01;
 
     fitter_test = Fitter(model_test) |> set!(autoplot=false)
+    show(fitter_test)
 
     for a in 1:10:91, b in 1:10
         ydata_test = model_test(xdata_test, a, b) + 0.01*randn(length(xdata_test))
@@ -49,6 +50,7 @@ end
     fitter_test[:xmax] = 90
     fit!(fitter_test, [11, 6])
     fit!(fitter_test, [5])
+    show(fitter_test)
 end
 
 end
