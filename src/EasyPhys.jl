@@ -3,11 +3,6 @@ VERSION ≥ v"0.4" && __precompile__()
 
 module EasyPhys
 
-import Base.getindex
-import Base.setindex!
-import Base.show
-import Base.@__doc__
-
 export plt,
        Fitter,
        set!,

@@ -1,7 +1,9 @@
 
 import PyCall
 import PyPlot
+
 plt = PyPlot
+
 
 """
     plot!(fitter::Fitter; kwargs...)

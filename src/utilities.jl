@@ -1,4 +1,6 @@
 
+import Base.@__doc__
+
 
 """
     number_of_arguments(method::Function)
@@ -33,7 +35,8 @@ end
 
 """
     @partially_applicable f(x, args...; kwargs...) = ()
-    @partially_applicable function g(x, args...; kwargs...) () end
+
+    @partially_applicable function g(x, args...; kwargs...) end
 
 Pretty hacky. When applied to a function definition `f` of a function with
 more than one argument, defines two methods on the function: one equivalent
