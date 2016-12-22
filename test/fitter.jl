@@ -8,7 +8,7 @@ fitter_test = Fitter(f_test; autoplot=false)
 
 @testset "fitter.jl exceptions" begin
     @test_throws EasyPhys.CannotFitException  Fitter(g_test)
-    @test_throws EasyPhys.NoResultsException  results(fitter_test)
+    @test_throws EasyPhys.NoResultsException  fitter_test[:a]
     @test_throws EasyPhys.BadDataException    fit!(fitter_test)
     @test_throws EasyPhys.BadDataException    set_data!(fitter_test, [1, 2, 3],
                                                         [4, 5], [1, 2, 3])
@@ -28,14 +28,14 @@ end
     fitter_test = Fitter(model_test) |> set!(autoplot=false)
     show(fitter_test)
 
-    for a in 1:10:91, b in 1:10
+    for a in 1:20:81, b in 1:2:11
         ydata_test = model_test(xdata_test, a, b) + 0.01*randn(length(xdata_test))
 
         set_data!(fitter_test, xdata_test, ydata_test, eydata_test) |> fit!
         χ²_init_test = reduced_χ²(fitter_test, [a, b])
         χ²_worse_test = reduced_χ²(fitter_test)
 
-        @test all(abs(results(fitter_test).param .- [a, b]) ./ [a, b]
+        @test all(abs([fitter_test[:a][1], fitter_test[:b][1]] .- [a, b]) ./ [a, b]
                   .<= tolerance_test)
 
         ignore_outliers!(fitter_test, outlier_threshold_test) |> fit!

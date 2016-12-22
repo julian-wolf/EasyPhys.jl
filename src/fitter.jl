@@ -1,6 +1,10 @@
 
 using LsqFit
 
+import Base.getindex
+import Base.setindex!
+import Base.show
+
 
 type CannotFitException <: Exception
     msg::AbstractString
@@ -25,6 +29,9 @@ type Fitter
     "Model function to fit to."
     f::Function
 
+    "Parameters to be held constant when fitting."
+    c::Dict{Symbol, Float64}
+
     "Datapoints for the independent variable x."
     xdata::Array{Float64, 1}
 
@@ -37,11 +44,20 @@ type Fitter
     "Initial guesses for the best-fit parameters."
     guesses::Array{Float64, 1}
 
+    "Whether the most recent fitting attempt has converged."
+    _converged::Bool
+
     "Datapoints to be ignored when fitting."
     _outliers::BitArray{1}
 
-    "Results of the least-squares optimization."
-    _results::Nullable{LsqFit.LsqFitResult{Float64}}
+    "Studentized residuals of the fit."
+    _residuals::Nullable{Array{Float64, 1}}
+
+    "Best-fit parameters and their uncertainties."
+    _parameters::Dict{Symbol, Union{Tuple{Float64, Float64}, Void}}
+
+    "Covariance matrix of the best-fit parameters."
+    _covariance::Union{Array{Float64, 2}, Void}
 
     "Various settings for the fitter."
     _settings::Dict{Symbol, Any}
@@ -58,16 +74,27 @@ type Fitter
 end
 
 
+# TODO: deal with constants
 """
     Fitter(f::Function; kwargs...)
 
-Creates a new Fitter object with model function `f`.
-"""
-function Fitter(f::Function; kwargs...)
+    Fitter(f::Function, c::Dict{Symbol, Float64}; kwargs...)
 
-    results = Nullable{LsqFit.LsqFitResult}()
+Creates a new Fitter object with model function `f` and constants
+described by `c` in the form `Dict(:constant_parameter_name => value)`.
+"""
+function Fitter(f::Function, c::Dict{Symbol, Float64}; kwargs...)
+
+    residuals = Nullable{Array}()
+
+    arg_names = argument_names(f)
+    variable_name = arg_names[1]
+    param_names = arg_names[2:end]
+
+    parameters = Dict{Symbol, Any}([(p, nothing) for p in param_names])
 
     settings = Dict{Symbol, Any}(
+            :error_range     => 0.68,
             :autoplot        => true,
             :xscale          => "linear",
             :yscale          => "linear",
@@ -76,8 +103,8 @@ function Fitter(f::Function; kwargs...)
             :fpoints         => 1000,
             :xmin            => nothing,
             :xmax            => nothing,
-            :xlabel          => "x",
-            :ylabel          => "f(x)",
+            :xlabel          => "$(variable_name)",
+            :ylabel          => "f($(variable_name))",
             :style_data      => Dict(:marker => "+", :color => "b",   :ls => ""),
             :style_outliers  => Dict(:marker => "+", :color => "0.5", :ls => ""),
             :style_fit       => Dict(:marker => "",  :color => "r",   :ls => "-"),
@@ -95,21 +122,39 @@ function Fitter(f::Function; kwargs...)
 
     f_fitting(x, p) = f(x, p...)
 
+    converged     = false
+    covariance    = nothing
     figure_number = -1
+    outliers      = BitArray{1}()
+    guesses       = ones(n_parameters)
 
-    outliers = BitArray{1}()
-
-    guesses = ones(n_parameters)
-
-    Fitter(f, [], [], [], guesses, outliers, results, settings, f_fitting,
-           n_parameters, figure_number)
+    Fitter(f, c, [], [], [], guesses, converged, outliers, residuals, parameters,
+           covariance, settings, f_fitting, n_parameters, figure_number)
 end
+
+
+Fitter(f::Function; kwargs...) = Fitter(f, Dict{Symbol, Float64}(); kwargs...)
 
 
 setindex!(fitter::Fitter, val, key) = fitter._settings[key] = val
 
 
-getindex(fitter::Fitter, key) = fitter._settings[key]
+function getindex(fitter::Fitter, key)
+    val = nothing
+    if key ∈ keys(fitter._settings)
+        val = fitter._settings[key]
+    elseif key ∈ keys(fitter._parameters)
+        if fitter._converged
+            val = fitter._parameters[key]
+        else
+            throw(NoResultsException("Fit results cannot be accessed until " *
+                                     "`fit!` has been called successfully."))
+        end
+    else
+        throw(KeyError(key))
+    end
+    val
+end
 
 
 function show(stream::IO, fitter::Fitter)
@@ -130,28 +175,21 @@ function show(stream::IO, fitter::Fitter)
         end
     end
 
-    param_names = argument_names(fitter.f)[2:end] # skip the x
-    for i = 1:fitter._n_parameters
-        description *= "\t$(rpad(param_names[i], 15)) = "
+    for (i, key) in enumerate(keys(fitter._parameters))
+        description *= "\t$(rpad(key, 15)) = "
         description *= "$(fitter.guesses[i])\n"
     end
     description *= "\n"
 
-    try
-        fit_params = results(fitter).param
-        fit_errors = parameter_errors(fitter)
+    if fitter._converged
         χ²_fit = reduced_χ²(fitter)
         description *= "Best-fit parameters (χ² = $(χ²_fit)):\n\n"
-        for i = 1:fitter._n_parameters
-            description *= "\t$(rpad(param_names[i], 15)) = "
-            description *= "$(fit_params[i]) ± $(fit_errors[i])\n"
+        for (key, (val, err)) in fitter._parameters
+            description *= "\t$(rpad(key, 15)) = "
+            description *= "$(val) ± $(err)\n"
         end
-    catch e
-        if isa(e, NoResultsException)
-            description *= "Fit results not yet present."
-        else
-            rethrow(e)
-        end
+    else
+        description *= "Fit results not yet present."
     end
 
     write(stream, description)
@@ -259,6 +297,7 @@ function xlims(fitter::Fitter)
     (xmin, xmax)
 end
 
+
 """
     data_mask(fitter::Fitter)
 
@@ -289,7 +328,7 @@ being fit to. Returns `fitter` so that similar calls can be chained together.
 @partially_applicable function fit!(fitter::Fitter, guesses=nothing; kwargs...)
     if [] ∈ (fitter.xdata, fitter.ydata, fitter.eydata)
         throw(BadDataException("All xdata, ydata, and eydata must be set " *
-                               "before calling fit!."))
+                               "before calling `fit!`."))
     end
 
     set!(fitter; kwargs...)
@@ -309,42 +348,32 @@ being fit to. Returns `fitter` so that similar calls can be chained together.
     eydata_fit = fitter.eydata[fit_mask]
 
     weights = 1 ./ abs(eydata_fit)
-    fitter._results = Nullable(curve_fit(fitter._f_fitting, xdata_fit, ydata_fit,
-                                         weights, fitter.guesses))
+    fit_results = curve_fit(fitter._f_fitting, xdata_fit, ydata_fit,
+                            weights, fitter.guesses)
 
-    if fitter[:autoplot]
-        plot!(fitter)
+    if fit_results.converged
+        fitter._converged = true
+
+        params = fit_results.param
+        param_errors = estimate_errors(fit_results, fitter[:error_range])
+
+        for (i, k) in enumerate(keys(fitter._parameters))
+            fitter._parameters[k] = (params[i], param_errors[i])
+        end
+
+        fitter._covariance = estimate_covar(fit_results)
+        fitter._residuals = Nullable{Array}(-fit_results.resid)
+
+        if fitter[:autoplot]
+            plot!(fitter)
+        end
+    else
+        fitter._converged = false
+
+        warn("Fit did not converge.")
     end
 
     fitter
-end
-
-
-"""
-    results(fitter::Fitter)
-
-Returns the results of fitting `fitter`, of type `LsqFitResult`. This has
-fields `dof`, `param`, `resid`, and `jacobian`.
-"""
-function results(fitter::Fitter)
-    if isnull(fitter._results)
-        throw(NoResultsException("fit! must be called on fitter before " *
-                                 "results can be accessed."))
-    end
-
-    get(fitter._results)
-end
-
-
-"""
-    parameter_errors(fitter::Fitter, alpha)
-
-Computes the errors in the best-fit parameters associated with `fitter` to
-the confidence interval described by `alpha`.
-"""
-function parameter_errors(fitter::Fitter, alpha=0.68)
-    fit_results = results(fitter)
-    estimate_errors(fit_results, alpha)
 end
 
 
@@ -353,10 +382,7 @@ end
 
 Computes the covariance matrix of the best-fit parameters associated with `fitter`.
 """
-function parameter_covariance(fitter::Fitter)
-    fit_results = results(fitter)
-    estimate_covar(fit_results)
-end
+parameter_covariance(fitter::Fitter) = fitter._covariance
 
 
 """
@@ -372,8 +398,12 @@ function studentized_residuals(fitter::Fitter, params=[])
 
     resids = []
     if isempty(params)
-        fit_results = results(fitter)
-        resids = -fit_results.resid
+        if fitter._converged
+            resids = get(fitter._residuals)
+        else
+            throw(NoResultsException("Fit must converge before residuals can " *
+                                     "be accessed."))
+        end
     else
         fit_mask = data_mask(fitter)
         weights = 1 ./ abs(fitter.eydata[fit_mask])
@@ -394,16 +424,8 @@ Computes the reduced χ² of the fit described by `fitter`.
 function reduced_χ²(fitter::Fitter, params=[])
     squared_residuals = studentized_residuals(fitter, params).^2
 
-    ndof = 0
-    try
-        ndof = results(fitter).dof
-    catch e
-        if isa(e, NoResultsException) && ~isempty(params)
-            ndof = (data_mask(fitter) |> countnz) - length(params)
-        else
-            rethrow(e)
-        end
-    end
+    n_params = isempty(params) ? length(fitter._parameters) : length(params)
+    ndof = countnz(data_mask(fitter)) - n_params
 
     sum(squared_residuals) / ndof
 end
@@ -422,8 +444,7 @@ best-fit parameters.
 """
 @partially_applicable function apply_f(fitter::Fitter, x, params=[])
     if isempty(params)
-        fit_results = results(fitter)
-        params = fit_results.param
+        params = [v for (v, _) in values(fitter._parameters)]
     end
     fitter._f_fitting(x, params)
 end

@@ -15,6 +15,8 @@ fig_b_test = set_data!(fitter_b_test, xdata_test, ydata_test, eydata_test) |> pl
 
 @test fig_a_test ≠ fig_b_test
 
+fit!(fitter_a_test)
+
 @test fig_a_test == ignore_outliers!(fitter_a_test, 1) |> fit! |> plot!
 
 end
