@@ -10,7 +10,6 @@ export plt,
        apply_mask!,
        ignore_outliers!,
        fit!,
-       results,
        parameter_covariance,
        studentized_residuals,
        reduced_χ²,
@@ -18,7 +17,6 @@ export plt,
        plot!
 
 include("utilities.jl")
-include("data.jl")
 include("fitter.jl")
 include("plot.jl")
 

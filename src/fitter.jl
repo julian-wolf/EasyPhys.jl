@@ -1,5 +1,6 @@
 
 using LsqFit
+using DataArrays, DataFrames
 
 import Base.getindex
 import Base.setindex!
@@ -216,7 +217,11 @@ end
 """
     set_data!(fitter::Fitter, xdata, ydata, eydata)
 
+    set_data!(fitter::Fitter, dataframe)
+
     (fitter::Fitter) |> set_data!(xdata, ydata, eydata)
+
+    (fitter::Fitter) |> set_data!(dataframe)
 
 Updates the data associated with `fitter`. Returns `fitter` so that
 similar calls can be chained together.
@@ -246,6 +251,15 @@ similar calls can be chained together.
     end
 
     fitter
+end
+
+
+@partially_applicable function set_data!(fitter::Fitter, dataframe)
+    if (size(dataframe, 1) ≠ 3)
+        throw(BadDataException("Exactly 3 columns of data must be supplied."))
+    end
+
+    set_data!(fitter, dataframe.columns...)
 end
 
 
