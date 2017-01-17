@@ -2,6 +2,7 @@
 using LsqFit
 using DataArrays, DataFrames
 
+
 import Base.getindex
 import Base.setindex!
 import Base.show
@@ -33,14 +34,8 @@ type Fitter
     "Parameters to be held constant when fitting."
     c::Dict{Symbol, Float64}
 
-    "Datapoints for the independent variable x."
-    xdata::Array{Float64, 1}
-
-    "Datapoints for the dependent variable y."
-    ydata::Array{Float64, 1}
-
-    "Errors (standard deviations) in the y datapoints."
-    eydata::Array{Float64, 1}
+    "Data to be fitted to."
+    data::DataFrame
 
     "Initial guesses for the best-fit parameters."
     guesses::Array{Float64, 1}
@@ -106,6 +101,9 @@ function Fitter(f::Function, c::Dict{Symbol, Float64}; kwargs...)
             :xmax            => nothing,
             :xlabel          => "$(variable_name)",
             :ylabel          => "f($(variable_name))",
+            :xvar            => variable_name,
+            :yvar            => :y,
+            :eyvar           => :y_err,
             :style_data      => Dict(:marker => "+", :color => "b",   :ls => ""),
             :style_outliers  => Dict(:marker => "+", :color => "0.5", :ls => ""),
             :style_fit       => Dict(:marker => "",  :color => "r",   :ls => "-"),
@@ -123,13 +121,14 @@ function Fitter(f::Function, c::Dict{Symbol, Float64}; kwargs...)
 
     f_fitting(x, p) = f(x, p...)
 
+    data          = DataFrame()
     converged     = false
     covariance    = nothing
     figure_number = -1
     outliers      = BitArray{1}()
     guesses       = ones(n_parameters)
 
-    Fitter(f, c, [], [], [], guesses, converged, outliers, residuals, parameters,
+    Fitter(f, c, data, guesses, converged, outliers, residuals, parameters,
            covariance, settings, f_fitting, n_parameters, figure_number)
 end
 
@@ -198,6 +197,30 @@ end
 
 
 """
+    xdata(fitter::Fitter)
+
+Gets the dependent data associated with `fitter`.
+"""
+xdata(fitter::Fitter) = fitter.data[fitter[:xvar]]
+
+
+"""
+    ydata(fitter::Fitter)
+
+Gets the independent data associated with `fitter`.
+"""
+ydata(fitter::Fitter) = fitter.data[fitter[:yvar]]
+
+
+"""
+    eydata(fitter::Fitter)
+
+Gets the errors in the independent data associated with `fitter`.
+"""
+eydata(fitter::Fitter) = fitter.data[fitter[:eyvar]]
+
+
+"""
     set!(fitter::Fitter; kwargs...)
 
     (fitter::Fitter) |> set!(; kwargs...)
@@ -223,8 +246,9 @@ end
 
     (fitter::Fitter) |> set_data!(dataframe)
 
-Updates the data associated with `fitter`. Returns `fitter` so that
-similar calls can be chained together.
+Updates the data associated with `fitter`. If a DataFrame is supplied, three
+columns must be present in the order [xdata, ydata, eydata]. Returns `fitter`
+so that similar calls can be chained together.
 """
 @partially_applicable function set_data!(fitter::Fitter, xdata, ydata, eydata)
     n_data = length(xdata)
@@ -240,26 +264,36 @@ similar calls can be chained together.
                                "the size of xdata and ydata"))
     end
 
+    dataframe = DataFrame(Any[xdata, ydata, eydata], [:x, :y, :y_err])
+
+    set_data!(fitter, dataframe)
+end
+
+
+@partially_applicable function set_data!(fitter::Fitter, dataframe::DataFrame,
+        xvar=nothing, yvar=nothing, eyvar=nothing)
+    if (size(dataframe, 2) ≠ 3)
+        throw(BadDataException("Exactly 3 columns of data must be supplied."))
+    end
+
+    if is( xvar, nothing)  xvar = names(dataframe)[1] end
+    if is( yvar, nothing)  yvar = names(dataframe)[2] end
+    if is(eyvar, nothing) eyvar = names(dataframe)[3] end
+
+    fitter[:xvar] = xvar
+    fitter[:yvar] = yvar
+    fitter[:eyvar] = eyvar
+
+    n_data = size(dataframe, 1)
     fitter._outliers = BitArray{1}(repeat([false], outer=n_data))
 
-    fitter.xdata = xdata
-    fitter.ydata = ydata
-    fitter.eydata = eydata
+    fitter.data = dataframe
 
     if fitter[:autoplot]
         plot!(fitter)
     end
 
     fitter
-end
-
-
-@partially_applicable function set_data!(fitter::Fitter, dataframe)
-    if (size(dataframe, 1) ≠ 3)
-        throw(BadDataException("Exactly 3 columns of data must be supplied."))
-    end
-
-    set_data!(fitter, dataframe.columns...)
 end
 
 
@@ -305,8 +339,8 @@ end
 Gets the active x-limits `xmin` and `xmax` of `fitter`.
 """
 function xlims(fitter::Fitter)
-    xmin = is(fitter[:xmin], nothing) ? minimum(fitter.xdata) : fitter[:xmin]
-    xmax = is(fitter[:xmax], nothing) ? maximum(fitter.xdata) : fitter[:xmax]
+    xmin = is(fitter[:xmin], nothing) ? minimum(xdata(fitter)) : fitter[:xmin]
+    xmax = is(fitter[:xmax], nothing) ? maximum(xdata(fitter)) : fitter[:xmax]
 
     (xmin, xmax)
 end
@@ -321,7 +355,7 @@ as determined by `fitter[:xmin]` and `fitter[:xmax]` as well as any outliers.
 function data_mask(fitter::Fitter)
     xmin, xmax = xlims(fitter)
 
-    (xmin .<= fitter.xdata .<= xmax) & ~fitter._outliers
+    (xmin .<= xdata(fitter) .<= xmax) & ~fitter._outliers
 end
 
 
@@ -340,7 +374,7 @@ If provided, `guesses` are used as the initial guesses for the parameters
 being fit to. Returns `fitter` so that similar calls can be chained together.
 """
 @partially_applicable function fit!(fitter::Fitter, guesses=nothing; kwargs...)
-    if [] ∈ (fitter.xdata, fitter.ydata, fitter.eydata)
+    if size(fitter.data, 1) == 0
         throw(BadDataException("All xdata, ydata, and eydata must be set " *
                                "before calling `fit!`."))
     end
@@ -357,9 +391,9 @@ being fit to. Returns `fitter` so that similar calls can be chained together.
     end
 
     fit_mask = data_mask(fitter)
-    xdata_fit = fitter.xdata[fit_mask]
-    ydata_fit = fitter.ydata[fit_mask]
-    eydata_fit = fitter.eydata[fit_mask]
+    xdata_fit = xdata(fitter)[fit_mask]
+    ydata_fit = ydata(fitter)[fit_mask]
+    eydata_fit = eydata(fitter)[fit_mask]
 
     weights = 1 ./ abs(eydata_fit)
     fit_results = curve_fit(fitter._f_fitting, xdata_fit, ydata_fit,
@@ -405,7 +439,7 @@ parameter_covariance(fitter::Fitter) = fitter._covariance
 Computes the studentized residuals of the fit described by `fitter`.
 """
 function studentized_residuals(fitter::Fitter, params=[])
-    if [] ∈ (fitter.xdata, fitter.ydata, fitter.eydata)
+    if size(fitter.data, 1) == 0
         throw(BadDataException("All xdata, ydata, and eydata must be set " *
                                "in order to calculate residuals."))
     end
@@ -420,9 +454,9 @@ function studentized_residuals(fitter::Fitter, params=[])
         end
     else
         fit_mask = data_mask(fitter)
-        weights = 1 ./ abs(fitter.eydata[fit_mask])
-        resids = fitter.ydata[fit_mask]
-               - apply_f(fitter, fitter.xdata[fit_mask], params)
+        weights = 1 ./ abs(eydata(fitter)[fit_mask])
+        resids = ydata(fitter)[fit_mask]
+               - apply_f(fitter, xdata(fitter)[fit_mask], params)
         resids .*= weights
     end
 

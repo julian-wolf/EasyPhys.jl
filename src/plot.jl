@@ -48,16 +48,16 @@ function plot!(fitter::Fitter; kwargs...)
 
     fit_mask = data_mask(fitter)
 
-    xdata_included = fitter.xdata[fit_mask]
-    ydata_included = fitter.ydata[fit_mask]
-    eydata_included = fitter.eydata[fit_mask]
+    xdata_included = xdata(fitter)[fit_mask]
+    ydata_included = ydata(fitter)[fit_mask]
+    eydata_included = eydata(fitter)[fit_mask]
 
     ax_main[:errorbar](xdata_included, ydata_included, eydata_included;
                        fitter[:style_data]...)
 
-    xdata_excluded = fitter.xdata[~fit_mask]
-    ydata_excluded = fitter.ydata[~fit_mask]
-    eydata_excluded = fitter.eydata[~fit_mask]
+    xdata_excluded = xdata(fitter)[~fit_mask]
+    ydata_excluded = ydata(fitter)[~fit_mask]
+    eydata_excluded = eydata(fitter)[~fit_mask]
 
     ax_main[:errorbar](xdata_excluded, ydata_excluded, eydata_excluded;
                        fitter[:style_outliers]...)
@@ -79,8 +79,7 @@ function plot!(fitter::Fitter; kwargs...)
                                 ones(xdata_included); fitter[:style_data]...)
         catch e
             if isa(e, PyCall.PyError)
-                warn("""
-                        Length of xdata does not match length of residuals.
+                warn("""Length of xdata does not match length of residuals.
                         `fit!` must be called after calling `apply_mask!` or
                         `ignore_residuals!` in order to update residuals.""")
             else
