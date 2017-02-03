@@ -1,7 +1,8 @@
 EasyPhys.jl
 ===========
 
-The EasyPhys package is a small library written to simplify some of the tasks that are repeated frequently when doing physics stuff. So far, it's very minimal.
+The EasyPhys package is a small library written to simplify some of the tasks that are repeated frequently when doing physics stuff.
+So far, it's very minimal.
 
 Functionality is largely build on top of [LsqFit.jl](https://github.com/JuliaOpt/LsqFit.jl) and [PyPlot.jl](https://github.com/JuliaPy/PyPlot.jl) and has been inspired by the [Spinmob](https://github.com/Spinmob/spinmob) analysis and plotting package.
 
@@ -10,6 +11,12 @@ Functionality is largely build on top of [LsqFit.jl](https://github.com/JuliaOpt
 
 [![Build Status](https://travis-ci.org/julian-wolf/EasyPhys.jl.svg)](https://travis-ci.org/julian-wolf/EasyPhys.jl)
 [![Coverage Status](https://coveralls.io/repos/github/julian-wolf/EasyPhys.jl/badge.svg?branch=master)](https://coveralls.io/github/julian-wolf/EasyPhys.jl?branch=master)
+
+Installation
+------------
+
+EasyPhys is available through Julia's built-in package manager, and can be installed by running `Pkg.add("EasyPhys.jl")` at the Julia prompt.
+This will automatically install any necessary dependencies.
 
 Usage
 -----
