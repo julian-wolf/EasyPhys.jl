@@ -12,8 +12,7 @@ notifications:
   email: false
 
 script:
-  # need to get LsqFit from master, for some reason
-  - julia -e 'Pkg.init(); Pkg.clone("https://github.com/JuliaOpt/LsqFit.jl.git"); Pkg.clone(pwd()); Pkg.update()'
+  - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.update()'
   - julia -e 'ENV["PYTHON"]=""; Pkg.build("PyCall"); using PyPlot; Pkg.test("EasyPhys", coverage=true)'
 
 after_success:
