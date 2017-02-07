@@ -29,19 +29,19 @@ Describes a single parameter to a model function.
 type ModelParameter
 
     "Index of the parameter in the function's argument list."
-    position::Int64
+    position::Integer
 
     "For fixed parameters (constants), the value; otherwise, the initial guess."
-    guess::Float64
+    guess::AbstractFloat
 
     "Whether or not the parameter is to be held constant."
     is_constant::Bool
 
     "Best-fit value of the parameter, if it exists."
-    best_fit_value::Nullable{Float64}
+    best_fit_value::Nullable{AbstractFloat}
 
     "Uncertainty on the best-fit value of the parameter, if it exists."
-    fit_uncertainty::Nullable{Float64}
+    fit_uncertainty::Nullable{AbstractFloat}
 
 end
 
@@ -62,7 +62,7 @@ is given, parameters are assumed not to be constants.
 """
 function ModelParameter(position, guess, is_constant::Bool)
     ModelParameter(position, guess, is_constant,
-                   Nullable{Float64}(), Nullable{Float64}())
+                   Nullable{AbstractFloat}(), Nullable{AbstractFloat}())
 end
 
 
@@ -105,7 +105,7 @@ type Fitter
     _outliers::BitArray{1}
 
     "Studentized residuals of the fit."
-    _residuals::Nullable{Array{Float64, 1}}
+    _residuals::Nullable{Array{AbstractFloat, 1}}
 
     "Covariance matrix of the best-fit parameters."
     _covariance::Union{Array{Float64, 2}, Void}
@@ -117,10 +117,10 @@ type Fitter
     _f_fitting::Function
 
     "Number of parameters to be fit to."
-    _n_parameters::Int64
+    _n_parameters::Integer
 
     "Figure number of the associated plot."
-    _figure_number::Int64
+    _figure_number::Integer
 
 end
 
@@ -139,7 +139,8 @@ provided through `c`. Both arguments expect Dicts with entries of the form
 """
 function Fitter(f::Function;
                 p::Dict{Symbol, Float64}=Dict{Symbol, Float64}(),
-                c::Dict{Symbol, Float64}=Dict{Symbol, Float64}(), kwargs...)
+                c::Dict{Symbol, Float64}=Dict{Symbol, Float64}(),
+                kwargs...)
 
     residuals = Nullable{Array}()
 
@@ -306,8 +307,8 @@ or `model_parameters` to null.
 """
 function null_results!(model_parameters::ModelParameters)
     for key in keys(model_parameters)
-        model_parameters[key].best_fit_value  = Nullable{Float64}()
-        model_parameters[key].fit_uncertainty = Nullable{Float64}()
+        model_parameters[key].best_fit_value  = Nullable{AbstractFloat}()
+        model_parameters[key].fit_uncertainty = Nullable{AbstractFloat}()
     end
 end
 
@@ -604,7 +605,7 @@ Returns `fitter` so that similar calls can be chained together.
         throw(CannotFitException("No free parameters! Cannot fit."))
     end
 
-    fitting_constants = Dict{Symbol, Float64}(
+    fitting_constants = Dict{Symbol, AbstractFloat}(
         [(key, val.guess) for (key, val) in fitter._parameters if val.is_constant])
 
     auxiliary_fitting_expr = Expr(:function)
@@ -644,9 +645,9 @@ Returns `fitter` so that similar calls can be chained together.
 
         for (i, (param, param_error)) in enumerate(zip(params, param_errors))
             fitter._parameters[fitting_params[i]].best_fit_value =
-                Nullable{Float64}(params[i])
+                Nullable{AbstractFloat}(params[i])
             fitter._parameters[fitting_params[i]].fit_uncertainty =
-                Nullable{Float64}(param_errors[i])
+                Nullable{AbstractFloat}(param_errors[i])
         end
 
         fitter._covariance = estimate_covar(fit_results)
