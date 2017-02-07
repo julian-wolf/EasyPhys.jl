@@ -16,15 +16,15 @@ fitter_test = Fitter(f_test; autoplot=false)
                                                         [4, 5, 6], [1, 2])
 end
 
+tolerance_test = 0.08
+outlier_threshold_test = 2
+
+model_test(x, a, b) = a*exp(-x*b)
+
+xdata_test = linspace(0, 10, 100)
+eydata_test = 0.01;
+
 @testset "fitter.jl `fit!` and friends" begin
-    tolerance_test = 0.08
-    outlier_threshold_test = 2
-
-    model_test(x, a, b) = a*exp(-x*b)
-
-    xdata_test = linspace(0, 10, 100)
-    eydata_test = 0.01;
-
     fitter_test = Fitter(model_test) |> set!(autoplot=false)
     show(fitter_test)
 
@@ -47,14 +47,33 @@ end
         @test all(apply_f(fitter_test, xdata_test, [a, b]) == y_true_test)
     end
 
-    fitter_test |> fix!(a=80) |> fit!
+    fitter_test[:xmax] = 90
+    fit!(fitter_test)
+    show(fitter_test)
+
+    show(parameter_covariance(fitter_test))
+end
+
+@testset "fitter.jl fixing and freeing parameters" begin
+    fitter_test = Fitter(model_test) |> set!(autoplot=false)
+
+    a = 1
+    b = 2
+    ydata_test = model_test(xdata_test, a, b) + 0.01*randn(length(xdata_test))
+
+    set_data!(fitter_test, xdata_test, ydata_test, eydata_test) |> fix!(a=1) |> fit!
+    show(fitter_test)
+
+    fitter_test[:a] = 1.1
+    fitter_test |> fit!
     show(fitter_test)
 
     fitter_test |> free!(:a) |> fit!
     show(fitter_test)
 
-    fitter_test[:xmax] = 90
-    fit!(fitter_test)
+    fitter_test = Fitter(
+        model_test; p=Dict(:k => 5.0), c=Dict(:b => 2.0, :m => 7.0), autoplot=false)
+    set_data!(fitter_test, xdata_test, ydata_test, eydata_test) |> fit!
     show(fitter_test)
 end
 

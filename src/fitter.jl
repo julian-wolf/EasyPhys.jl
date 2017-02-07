@@ -84,38 +84,6 @@ end
 typealias ModelParameters Dict{Symbol, ModelParameter}
 
 
-function show(stream::IO, model_parameters::ModelParameters)
-    sorted_parameters = sort([k for (k, v) in model_parameters if ~v.is_constant],
-                             by=(k -> model_parameters[k].position))
-
-    sorted_constants =  sort([k for (k, v) in model_parameters if  v.is_constant],
-                             by=(k -> model_parameters[k].position))
-
-    description = "EasyPhys.ModelParameters with the following properties:\n\n"
-
-    description *= "Free parameters: \n\n"
-    for (i, p) in enumerate(sorted_parameters)
-        description *= "\t:$(p) (position: $(rpad(2, i)))\n"
-        description *= "\t  guess:          $(rpad(5, model_parameters[p].guess))\n"
-        if ~isnull(model_parameters[p].best_fit_value)
-            val = get(model_parameters[p].best_fit_value)
-            err = get(model_parameters[p].fit_uncertainty)
-            description *= "\t  best-fit value: $(rpad(5, val)) ± $(rpad(5, err))\n"
-        end
-    end
-    description *= "\n"
-
-    description *= "Fixed parameters: \n\n"
-    for (i, p) in enumerate(sorted_parameters)
-        description *= "\t:$(p)\n"
-        description *= "\t  fixed value:    $(rpad(5, model_parameters[p].guess))\n"
-    end
-    description *= "\n"
-
-    write(stream, description)
-end
-
-
 """
 Describes a set of data and a model to be fit to.
 """
@@ -160,14 +128,18 @@ end
 """
     Fitter(f::Function; kwargs...)
 
-    Fitter(f::Function, c::Dict{Symbol, Float64}; kwargs...)
+    Fitter(f::Function; p::Dict{Symbol, Float64}, kwargs...)
 
-Creates a new Fitter object with model function `f` and constants
-described by `c` in the form `Dict(:constant_parameter_name => value)`.
+    Fitter(f::Function; c::Dict{Symbol, Float64}, kwargs...)
+
+Creates a new Fitter object with model function `f`. Initial guesses can
+be provided through `p` and and fixed parameters (constants) can be
+provided through `c`. Both arguments expect Dicts with entries of the form
+`:parameter_name => value`.
 """
-function Fitter(f::Function,
+function Fitter(f::Function;
                 p::Dict{Symbol, Float64}=Dict{Symbol, Float64}(),
-                c::Dict{Symbol, Float64}=Dict{Symbol, Float64}(); kwargs...)
+                c::Dict{Symbol, Float64}=Dict{Symbol, Float64}(), kwargs...)
 
     residuals = Nullable{Array}()
 
