@@ -610,9 +610,9 @@ Returns `fitter` so that similar calls can be chained together.
 
     auxiliary_fitting_expr = Expr(:function)
 
-    push!(auxiliary_fitting_expr.args, Expr(:call))
+    push!(auxiliary_fitting_expr.args, Expr(:tuple))
     auxiliary_fitting_expr.args[1].args =
-        [:auxiliary_fitting_function, :fitter, fitter[:xvar], fitting_params...]
+        [:fitter, fitter[:xvar], fitting_params...]
 
     push!(auxiliary_fitting_expr.args, Expr(:block))
     for (k, v) in fitting_constants
@@ -626,8 +626,7 @@ Returns `fitter` so that similar calls can be chained together.
         push!(auxiliary_fitting_expr.args[2].args[end].args[3].args, k)
     end
 
-    # TODO: get rid of method redefinition warning
-    eval(auxiliary_fitting_expr)
+    auxiliary_fitting_function = eval(auxiliary_fitting_expr)
 
     fitting_function(x, p) = auxiliary_fitting_function(fitter, x, p...)
 
