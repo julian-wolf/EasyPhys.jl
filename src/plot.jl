@@ -67,7 +67,7 @@ function plot!(fitter::Fitter; kwargs...)
     end
 
     if fitter[:plot_guess]
-        y_guess = apply_f(fitter, x_plot, fitter.guesses)
+        y_guess = apply_f(fitter, x_plot, guesses(fitter))
         ax_main[:plot](x_plot, y_guess; fitter[:style_guess]...)
     end
 

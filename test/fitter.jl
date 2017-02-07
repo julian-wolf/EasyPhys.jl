@@ -47,9 +47,14 @@ end
         @test all(apply_f(fitter_test, xdata_test, [a, b]) == y_true_test)
     end
 
+    fitter_test |> fix!(a=80) |> fit!
+    show(fitter_test)
+
+    fitter_test |> free!(:a) |> fit!
+    show(fitter_test)
+
     fitter_test[:xmax] = 90
-    fit!(fitter_test, [11, 6])
-    fit!(fitter_test, [5])
+    fit!(fitter_test)
     show(fitter_test)
 end
 
