@@ -61,8 +61,9 @@ If no value is provided, `guess` defaults to 1. If no value of `is_constant`
 is given, parameters are assumed not to be constants.
 """
 function ModelParameter(position, guess, is_constant::Bool)
-    ModelParameter(position, guess, is_constant,
-                   Nullable{AbstractFloat}(), Nullable{AbstractFloat}())
+    ModelParameter(
+        position, guess, is_constant,
+        Nullable{AbstractFloat}(), Nullable{AbstractFloat}())
 end
 
 
@@ -156,16 +157,15 @@ function Fitter(f::Function; kwargs...)
             :style_data      => Dict(:marker => "+", :color => "b",   :ls => ""),
             :style_outliers  => Dict(:marker => "+", :color => "0.5", :ls => ""),
             :style_fit       => Dict(:marker => "",  :color => "r",   :ls => "-"),
-            :style_guess     => Dict(:marker => "",  :color => "k",   :ls => "--")
-        )
+            :style_guess     => Dict(:marker => "",  :color => "k",   :ls => "--"))
 
     merge!(settings, Dict(kwargs))
 
     n_parameters = number_of_arguments(f) - 1 # remove one for the x
 
     if n_parameters == 0
-        throw(CannotFitException("Cannot fit to a function with " *
-                                 "only one free parameter."))
+        msg = "Cannot fit to a function with only one free parameter."
+        throw(CannotFitException(msg))
     end
 
     f_fitting(x, p) = f(x, p...)
@@ -176,8 +176,9 @@ function Fitter(f::Function; kwargs...)
     figure_number = -1
     outliers      = BitArray{1}()
 
-    Fitter(f, data, parameters, converged, outliers, residuals,
-           covariance, settings, f_fitting, figure_number)
+    Fitter(
+        f, data, parameters, converged, outliers, residuals, covariance,
+        settings, f_fitting, figure_number)
 end
 
 
@@ -203,8 +204,9 @@ function getindex(fitter::Fitter, key)
             if fitter._converged
                 val = get(fitter._parameters[key].best_fit_value)
             else
-                throw(NoResultsException("Fit results cannot be accessed until " *
-                                         "`fit!` has been called successfully."))
+                msg = "Fit results cannot be accessed until " *
+                      "`fit!` has been called successfully."
+                throw(NoResultsException(msg))
             end
         end
     else
@@ -317,8 +319,9 @@ similar calls can be chained together.
 @partially_applicable function fix!(fitter::Fitter; kwargs...)
     for (parameter, value) in kwargs
         if parameter ∉ keys(fitter._parameters)
-            warn("$(parameter) is not a valid parameter " *
-                 "signifier. Ignoring it.")
+            msg = "$(parameter) is not a valid parameter " *
+                  "signifier. Ignoring it."
+            warn(msg)
         else
             fitter._parameters[parameter].is_constant = true
             fitter._parameters[parameter].guess = value
@@ -425,15 +428,15 @@ so that similar calls can be chained together.
 @partially_applicable function set_data!(fitter::Fitter, xdata, ydata, eydata)
     n_data = length(xdata)
     if length(ydata) ≠ n_data
-        throw(BadDataException("xdata and ydata must have the " *
-                               "same number of data"))
+        msg = "xdata and ydata must have the same number of data"
+        throw(BadDataException(msg))
     end
 
     if typeof(eydata) <: Number
         eydata = eydata * ones(xdata)
     elseif length(eydata) ≠ n_data
-        throw(BadDataException("eydata must be broadcastable to " *
-                               "the size of xdata and ydata"))
+        msg = "eydata must be broadcastable to the size of xdata and ydata"
+        throw(BadDataException(msg))
     end
 
     dataframe = DataFrame(Any[xdata, ydata, eydata], [:x, :y, :y_err])
@@ -442,10 +445,12 @@ so that similar calls can be chained together.
 end
 
 
-@partially_applicable function set_data!(fitter::Fitter, dataframe::DataFrame,
+@partially_applicable function set_data!(
+        fitter::Fitter, dataframe::DataFrame,
         xvar=nothing, yvar=nothing, eyvar=nothing)
     if (size(dataframe, 2) ≠ 3)
-        throw(BadDataException("Exactly 3 columns of data must be supplied."))
+        msg = "Exactly 3 columns of data must be supplied."
+        throw(BadDataException(msg))
     end
 
     if is( xvar, nothing)  xvar = names(dataframe)[1] end
@@ -501,6 +506,7 @@ fit results.
 @partially_applicable function ignore_outliers!(
         fitter::Fitter, max_residual=10, params=[])
     outliers = abs(studentized_residuals(fitter, params)) .> max_residual
+
     fitter |> apply_mask!(~outliers)
 end
 
@@ -542,8 +548,8 @@ Returns `fitter` so that similar calls can be chained together.
 """
 @partially_applicable function fit!(fitter::Fitter; kwargs...)
     if size(fitter.data, 1) == 0
-        throw(BadDataException("All xdata, ydata, and eydata must be set " *
-                               "before calling `fit!`."))
+        msg = "All xdata, ydata, and eydata must be set before calling `fit!`."
+        throw(BadDataException(msg))
     end
 
     set!(fitter; kwargs...)
@@ -553,12 +559,15 @@ Returns `fitter` so that similar calls can be chained together.
     ydata_fit = ydata(fitter)[fit_mask]
     eydata_fit = eydata(fitter)[fit_mask]
 
-    all_params = sort(collect(keys(fitter._parameters)),
-                      by=(k -> fitter._parameters[k].position))
+    all_params = sort(
+        collect(keys(fitter._parameters)),
+        by=(k -> fitter._parameters[k].position))
+
     fitting_params = filter((k -> ~fitter._parameters[k].is_constant), all_params)
 
     if isempty(fitting_params)
-        throw(CannotFitException("No free parameters! Cannot fit."))
+        msg = "No free parameters! Cannot fit."
+        throw(CannotFitException(msg))
     end
 
     fitting_constants = Dict{Symbol, AbstractFloat}(
@@ -583,8 +592,8 @@ Returns `fitter` so that similar calls can be chained together.
     guesses = [fitter._parameters[k].guess for k in fitting_params]
 
     weights = 1 ./ abs(eydata_fit)
-    fit_results = curve_fit(fitting_function, xdata_fit, ydata_fit,
-                            weights, guesses)
+    fit_results = curve_fit(
+        fitting_function, xdata_fit, ydata_fit, weights, guesses)
 
     if fit_results.converged
         fitter._converged = true
@@ -608,7 +617,8 @@ Returns `fitter` so that similar calls can be chained together.
     else
         fitter._converged = false
 
-        warn("Fit did not converge.")
+        msg = "Fit did not converge."
+        warn(msg)
     end
 
     fitter
@@ -630,8 +640,9 @@ Computes the studentized residuals of the fit described by `fitter`.
 """
 function studentized_residuals(fitter::Fitter, params=[])
     if size(fitter.data, 1) == 0
-        throw(BadDataException("All xdata, ydata, and eydata must be set " *
-                               "in order to calculate residuals."))
+        msg = "All xdata, ydata, and eydata must be set " *
+              "in order to calculate residuals."
+        throw(BadDataException(msg))
     end
 
     resids = []
@@ -639,14 +650,16 @@ function studentized_residuals(fitter::Fitter, params=[])
         if fitter._converged
             resids = get(fitter._residuals)
         else
-            throw(NoResultsException("Fit must converge before residuals can " *
-                                     "be accessed."))
+            msg = "Fit must converge before residuals can be accessed."
+            throw(NoResultsException(msg))
         end
     else
         fit_mask = data_mask(fitter)
         weights = 1 ./ abs(eydata(fitter)[fit_mask])
+
         resids = ydata(fitter)[fit_mask]
                - apply_f(fitter, xdata(fitter)[fit_mask], params)
+
         resids .*= weights
     end
 
@@ -691,7 +704,8 @@ best-fit parameters.
                 end
             end
         else
-            throw(NoResultsException("Parameters must be explicitly supplied."))
+            msg = "Parameters must be explicitly supplied."
+            throw(NoResultsException(msg))
         end
     end
     fitter._f_fitting(x, params)

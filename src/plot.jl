@@ -52,15 +52,17 @@ function plot!(fitter::Fitter; kwargs...)
     ydata_included = ydata(fitter)[fit_mask]
     eydata_included = eydata(fitter)[fit_mask]
 
-    ax_main[:errorbar](xdata_included, ydata_included, eydata_included;
-                       fitter[:style_data]...)
+    ax_main[:errorbar](
+        xdata_included, ydata_included, eydata_included;
+        fitter[:style_data]...)
 
     xdata_excluded = xdata(fitter)[~fit_mask]
     ydata_excluded = ydata(fitter)[~fit_mask]
     eydata_excluded = eydata(fitter)[~fit_mask]
 
-    ax_main[:errorbar](xdata_excluded, ydata_excluded, eydata_excluded;
-                       fitter[:style_outliers]...)
+    ax_main[:errorbar](
+        xdata_excluded, ydata_excluded, eydata_excluded;
+        fitter[:style_outliers]...)
 
     if fitter[:plot_curve] || fitter[:plot_guess]
         x_plot = linspace(xmin, xmax, fitter[:fpoints])
@@ -75,13 +77,16 @@ function plot!(fitter::Fitter; kwargs...)
         residuals = studentized_residuals(fitter)
 
         try
-            ax_resid[:errorbar](xdata_included, residuals,
-                                ones(xdata_included); fitter[:style_data]...)
+            ax_resid[:errorbar](
+                xdata_included, residuals,
+                ones(xdata_included); fitter[:style_data]...)
         catch e
             if isa(e, PyCall.PyError)
-                warn("""Length of xdata does not match length of residuals.
-                        `fit!` must be called after calling `apply_mask!` or
-                        `ignore_residuals!` in order to update residuals.""")
+                msg = """
+                    Length of xdata does not match length of residuals.
+                    `fit!` must be called after calling `apply_mask!` or
+                    `ignore_residuals!` in order to update residuals."""
+                warn(msg)
             else
                 rethrow(e)
             end
@@ -90,8 +95,7 @@ function plot!(fitter::Fitter; kwargs...)
         if fitter[:plot_curve]
             y_curve = apply_f(fitter, x_plot)
             ax_main[:plot](x_plot, y_curve; fitter[:style_fit]...)
-            ax_resid[:plot]([xmin, xmax], [0, 0];
-                            fitter[:style_fit]...)
+            ax_resid[:plot]([xmin, xmax], [0, 0]; fitter[:style_fit]...)
         end
     catch e
         if isa(e, NoResultsException)
