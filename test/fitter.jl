@@ -70,11 +70,6 @@ end
 
     fitter_test |> free!(:a) |> fit!
     show(fitter_test)
-
-    fitter_test = Fitter(
-        model_test; p=Dict(:k => 5.0), c=Dict(:b => 2.0, :m => 7.0), autoplot=false)
-    set_data!(fitter_test, xdata_test, ydata_test, eydata_test) |> fit!
-    show(fitter_test)
 end
 
 end

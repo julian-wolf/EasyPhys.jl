@@ -116,9 +116,6 @@ type Fitter
     "Function to use for fitting, taking only the required two parameters."
     _f_fitting::Function
 
-    "Number of parameters to be fit to."
-    _n_parameters::Integer
-
     "Figure number of the associated plot."
     _figure_number::Integer
 
@@ -128,19 +125,9 @@ end
 """
     Fitter(f::Function; kwargs...)
 
-    Fitter(f::Function; p::Dict{Symbol, Float64}, kwargs...)
-
-    Fitter(f::Function; c::Dict{Symbol, Float64}, kwargs...)
-
-Creates a new Fitter object with model function `f`. Initial guesses can
-be provided through `p` and and fixed parameters (constants) can be
-provided through `c`. Both arguments expect Dicts with entries of the form
-`:parameter_name => value`.
+Creates a new Fitter object with model function `f`.
 """
-function Fitter(f::Function;
-                p::Dict{Symbol, Float64}=Dict{Symbol, Float64}(),
-                c::Dict{Symbol, Float64}=Dict{Symbol, Float64}(),
-                kwargs...)
+function Fitter(f::Function; kwargs...)
 
     residuals = Nullable{Array}()
 
@@ -150,23 +137,6 @@ function Fitter(f::Function;
 
     parameters = ModelParameters(
         [(p, ModelParameter(i)) for (i, p) in enumerate(param_names)])
-
-    for (par, val) in p
-        if par ∈ keys(parameters)
-            parameters[par].guess = val
-        else
-            warn("$(par) is not a parameter of the supplied function. Ignoring.")
-        end
-    end
-
-    for (par, val) in c
-        if par ∈ keys(parameters)
-            parameters[par].guess = val
-            parameters[par].is_constant = true
-        else
-            warn("$(par) is not a parameter of the supplied function. Ignoring.")
-        end
-    end
 
     settings = Dict{Symbol, Any}(
             :error_range     => 0.68,
@@ -207,7 +177,7 @@ function Fitter(f::Function;
     outliers      = BitArray{1}()
 
     Fitter(f, data, parameters, converged, outliers, residuals,
-           covariance, settings, f_fitting, n_parameters, figure_number)
+           covariance, settings, f_fitting, figure_number)
 end
 
 
@@ -559,20 +529,6 @@ function data_mask(fitter::Fitter)
 
     (xmin .<= xdata(fitter) .<= xmax) & ~fitter._outliers
 end
-
-
-# """
-#     generate_fitting_function(fitter::Fitter)
-
-# Defines a toplevel fitting function named `fitting_function` that expects
-# only the free (non-constant) parameters of `fitter` and calls
-# `fitter._f_fitting` using a combination of these free parameters and any
-# fixed parameters associated with `fitter`.
-# """
-# function generate_fitting_function(fitter::Fitter)
-
-
-# end
 
 
 """
