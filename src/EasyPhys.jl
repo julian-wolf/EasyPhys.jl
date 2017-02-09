@@ -19,6 +19,7 @@ export plt,
        plot!
 
 include("utilities.jl")
+include("parameters.jl")
 include("fitter.jl")
 include("plot.jl")
 

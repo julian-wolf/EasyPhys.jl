@@ -24,68 +24,6 @@ end
 
 
 """
-Describes a single parameter to a model function.
-"""
-type ModelParameter
-
-    "Index of the parameter in the function's argument list."
-    position::Integer
-
-    "For fixed parameters (constants), the value; otherwise, the initial guess."
-    guess::AbstractFloat
-
-    "Whether or not the parameter is to be held constant."
-    is_constant::Bool
-
-    "Best-fit value of the parameter, if it exists."
-    best_fit_value::Nullable{AbstractFloat}
-
-    "Uncertainty on the best-fit value of the parameter, if it exists."
-    fit_uncertainty::Nullable{AbstractFloat}
-
-end
-
-
-"""
-    ModelParameter(position)
-
-    ModelParameter(position, is_constant::Bool)
-
-    ModelParameter(position, guess)
-
-    ModelParameter(position, guess, is_constant::Bool)
-
-Creates a new ModelParameter object with symbol name `name`, position
-`position` and guess (or fixed value, in the case of constants) `guess`.
-If no value is provided, `guess` defaults to 1. If no value of `is_constant`
-is given, parameters are assumed not to be constants.
-"""
-function ModelParameter(position, guess, is_constant::Bool)
-    ModelParameter(
-        position, guess, is_constant,
-        Nullable{AbstractFloat}(), Nullable{AbstractFloat}())
-end
-
-
-function ModelParameter(position, is_constant::Bool)
-    ModelParameter(position, 1.0, is_constant)
-end
-
-
-function ModelParameter(position, guess)
-    ModelParameter(position, guess, false)
-end
-
-
-function ModelParameter(position)
-    ModelParameter(position, 1.0, false)
-end
-
-
-typealias ModelParameters Dict{Symbol, ModelParameter}
-
-
-"""
 Describes a set of data and a model to be fit to.
 """
 type Fitter
@@ -137,7 +75,7 @@ function Fitter(f::Function; kwargs...)
     param_names = arg_names[2:end]
 
     parameters = ModelParameters(
-        [(p, ModelParameter(i)) for (i, p) in enumerate(param_names)])
+        [(p, FreeParameter(i, 1.0)) for (i, p) in enumerate(param_names)])
 
     settings = Dict{Symbol, Any}(
             :error_range     => 0.68,
@@ -186,7 +124,7 @@ function setindex!(fitter::Fitter, val, key)
     if key ∈ keys(fitter._settings)
         fitter._settings[key] = val
     elseif key ∈ keys(fitter._parameters)
-        fitter._parameters[key].guess = val
+        fitter._parameters[key].value = val
     else
         throw(KeyError(key))
     end
@@ -198,11 +136,11 @@ function getindex(fitter::Fitter, key)
     if key ∈ keys(fitter._settings)
         val = fitter._settings[key]
     elseif key ∈ keys(fitter._parameters)
-        if fitter._parameters[key].is_constant
-            val = fitter._parameters[key].guess
+        if isa(fitter._parameters[key], FixedParameter)
+            val = fitter._parameters[key].value
         else
             if fitter._converged
-                val = get(fitter._parameters[key].best_fit_value)
+                val = get(fitter._parameters[key].fit_value)
             else
                 msg = "Fit results cannot be accessed until " *
                       "`fit!` has been called successfully."
@@ -226,8 +164,8 @@ function show(stream::IO, fitter::Fitter)
     if n_free_parameters(fitter) < length(fitter._parameters)
         description *= "Constants:\n\n"
         for (key, val) in fitter._parameters
-            if val.is_constant
-                description *= "\t$(rpad(key, 15)) = $(val.guess)\n"
+            if isa(val, FixedParameter)
+                description *= "\t$(rpad(key, 15)) = $(val.value)\n"
             end
         end
         description *= "\n"
@@ -245,9 +183,9 @@ function show(stream::IO, fitter::Fitter)
     end
 
     for (key, val) in sort(
-            [(k, v) for (k, v) in fitter._parameters if ~v.is_constant],
+            [(k, v) for (k, v) in fitter._parameters if isa(v, FreeParameter)],
             by=(kv -> kv[2].position))
-        description *= "\t$(rpad(key, 15)) = $(fitter._parameters[key].guess)\n"
+        description *= "\t$(rpad(key, 15)) = $(fitter._parameters[key].value)\n"
     end
     description *= "\n"
 
@@ -255,15 +193,16 @@ function show(stream::IO, fitter::Fitter)
         χ²_fit = reduced_χ²(fitter)
         description *= "Best-fit parameters (χ² = $(χ²_fit)):\n\n"
         for (key, val) in sort(
-                [(k, v) for (k, v) in fitter._parameters if ~v.is_constant],
+                [(k, v) for (k, v) in fitter._parameters if isa(v, FreeParameter)],
                 by=(kv -> kv[2].position))
             description *= "\t$(rpad(key, 15)) = "
-            description *= "$(get(val.best_fit_value)) ± "
+            description *= "$(get(val.fit_value)) ± "
             description *= "$(get(val.fit_uncertainty))\n"
         end
     else
         description *= "Fit results not yet present."
     end
+    description *= "\n"
 
     write(stream, description)
 end
@@ -278,9 +217,11 @@ Sets all the `best_fit_value` and `fit_uncertainty` fields of `fitter`
 or `model_parameters` to null.
 """
 function null_results!(model_parameters::ModelParameters)
-    for key in keys(model_parameters)
-        model_parameters[key].best_fit_value  = Nullable{AbstractFloat}()
-        model_parameters[key].fit_uncertainty = Nullable{AbstractFloat}()
+    for val in values(model_parameters)
+        if isa(val, FreeParameter)
+            val.fit_value       = Nullable{AbstractFloat}()
+            val.fit_uncertainty = Nullable{AbstractFloat}()
+        end
     end
 end
 
@@ -298,7 +239,7 @@ so that similar calls can be chained together.
 """
 @partially_applicable function free!(fitter::Fitter, parameters...)
     for parameter in parameters
-        fitter._parameters[parameter].is_constant = false
+        free!(fitter._parameters[parameter])
     end
 
     null_results!(fitter)
@@ -307,32 +248,90 @@ so that similar calls can be chained together.
 end
 
 
-"""
-    fix!(fitter::Fitter; kwargs...)
+function free!(parameter::ModelParameter)
+    parameter = FreeParameter(parameter.position, parameter.value)
+end
 
-    (fitter::Fitter) |> fix!(; kwargs...)
 
-For each `{parameter => value}` pair in `kwargs`, fixes `parameter` to
-`value` when fitting, treating it as a constant. Returns `fitter` so that
-similar calls can be chained together.
+
 """
-@partially_applicable function fix!(fitter::Fitter; kwargs...)
-    for (parameter, value) in kwargs
-        if parameter ∉ keys(fitter._parameters)
-            msg = "$(parameter) is not a valid parameter " *
-                  "signifier. Ignoring it."
-            warn(msg)
+    fix!(fitter::Fitter; parameter_value_pairs...)
+
+    (fitter::Fitter) |> fix!(; parameter_value_pairs...)
+
+For each `{parameter => value}` pair in `parameter_value_pairs`, fixes
+`parameter` to `value` when fitting, treating it as a constant. Returns
+`fitter` so that similar calls can be chained together.
+"""
+@partially_applicable function fix!(fitter::Fitter; parameter_value_pairs...)
+    for (parameter, value) in parameter_value_pairs
+        fix!(fitter._parameters[parameter], value)
+    end
+
+    null_results!(fitter)
+
+    fitter
+end
+
+
+function fix!(parameter::ModelParameter, value)
+    parameter = FixedParameter(parameter.position, value)
+end
+
+
+# TODO: test `guess!`
+"""
+    guess!(fitter::Fitter, values::Dict{Symbol, AbstractFloat})
+
+    (fitter::Fitter) |> guess!(values::Dict{Symbol, AbstractFloat})
+
+    guess!(fitter::Fitter, values::Array{AbstractFloat, 1})
+
+    (fitter::Fitter) |> guess!(values::Array{AbstractFloat, 1})
+
+    guess!(fitter::Fitter; parameter_value_pairs...)
+
+    (fitter::Fitter) |> guess!(; parameter_value_pairs...)
+
+Set the initial guesses used to fit the free parameters of `fitter`.
+"""
+@partially_applicable function guess!(
+        fitter::Fitter, values::Dict{Symbol, AbstractFloat})
+
+    for (k, v) in values
+        parameter = fitter._parameters[k]
+        if isa(parameter, FreeParameter)
+            parameter.value = v
         else
-            fitter._parameters[parameter].is_constant = true
-            fitter._parameters[parameter].guess = value
+            msg = "$(k) is a fixed parameter. Its value can be set using " *
+                  "`fix!`, or it can be freed using `free!`"
+            warn(msg)
         end
     end
 
-    null_results!(fitter)
-
     fitter
 end
 
+
+@partially_applicable function guess!(
+        fitter::Fitter, values::Array{AbstractFloat, 1})
+
+    free_parameters =
+        [k for (k, v) in fitter._parameters if isa(v, FreeParameter)]
+
+    if length(values) ≠ length(free_parameters)
+        msg = "If supplied as an Array, `values` must contain exactly one " *
+              "entry for each free parameter associated with `fitter`."
+        warn(msg)
+    end
+
+    guess!(Dict((p, v) for (p, v) in zip(free_parameters, values)))
+end
+
+
+@partially_applicable function guess!(fitter::Fitter; parameter_value_pairs...)
+    guess!(fitter, parameter_value_pairs)
+end
 
 """
     guesses(fitter::Fitter)
@@ -345,7 +344,7 @@ all fit parameters associated with `fitter` or `model_parameters`.
 function guesses(model_parameters::ModelParameters)
     guesses = ones(length(model_parameters))
     for val in values(model_parameters)
-        guesses[val.position] = val.guess
+        guesses[val.position] = val.value
     end
 
     guesses
@@ -364,7 +363,7 @@ Returns the number of free (non-constant) parameters associated with
 `fitter` or `model_parameters`.
 """
 function n_free_parameters(model_parameters::ModelParameters)
-    length([v for v in values(model_parameters) if ~v.is_constant])
+    length([v for v in values(model_parameters) if isa(v, FreeParameter)])
 end
 
 
@@ -563,7 +562,8 @@ Returns `fitter` so that similar calls can be chained together.
         collect(keys(fitter._parameters)),
         by=(k -> fitter._parameters[k].position))
 
-    fitting_params = filter((k -> ~fitter._parameters[k].is_constant), all_params)
+    fitting_params = filter(
+        (k -> isa(fitter._parameters[k], FreeParameter)), all_params)
 
     if isempty(fitting_params)
         msg = "No free parameters! Cannot fit."
@@ -571,7 +571,7 @@ Returns `fitter` so that similar calls can be chained together.
     end
 
     fitting_constants = Dict{Symbol, AbstractFloat}(
-        [(key, val.guess) for (key, val) in fitter._parameters if val.is_constant])
+        [(key, val.value) for (key, val) in fitter._parameters if isa(val, FixedParameter)])
 
     auxiliary_fitting_function = eval(
         Expr( :function
@@ -589,7 +589,7 @@ Returns `fitter` so that similar calls can be chained together.
 
     fitting_function(x, p) = auxiliary_fitting_function(fitter, x, p...)
 
-    guesses = [fitter._parameters[k].guess for k in fitting_params]
+    guesses = [fitter._parameters[k].value for k in fitting_params]
 
     weights = 1 ./ abs(eydata_fit)
     fit_results = curve_fit(
@@ -602,7 +602,7 @@ Returns `fitter` so that similar calls can be chained together.
         param_errors = estimate_errors(fit_results, fitter[:error_range])
 
         for (i, (param, param_error)) in enumerate(zip(params, param_errors))
-            fitter._parameters[fitting_params[i]].best_fit_value =
+            fitter._parameters[fitting_params[i]].fit_value =
                 Nullable{AbstractFloat}(params[i])
             fitter._parameters[fitting_params[i]].fit_uncertainty =
                 Nullable{AbstractFloat}(param_errors[i])
@@ -697,10 +697,10 @@ best-fit parameters.
         if fitter._converged
             params = ones(length(fitter._parameters))
             for val in values(fitter._parameters)
-                if val.is_constant
-                    params[val.position] = val.guess
+                if isa(val, FixedParameter)
+                    params[val.position] = val.value
                 else
-                    params[val.position] = get(val.best_fit_value)
+                    params[val.position] = get(val.fit_value)
                 end
             end
         else
