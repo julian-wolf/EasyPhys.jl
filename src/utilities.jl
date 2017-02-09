@@ -64,9 +64,20 @@ true
 """
 macro partially_applicable(func)
     func_original = copy(func)
-    r = match(r"([^\(]+\()([^,;]+),?(.+)", string(func.args[1]))
-    func.args[1] = [r.captures[1], r.captures[3]]                |> join |> parse
-    func.args[2] = [r.captures[2], " -> ", string(func.args[2])] |> join |> parse
+
+    is_parameter(x) = isa(x, Symbol) || (isa(x, Expr) && x.head == :(::))
+
+    (var_index, var) =
+        [(i, x) for (i, x) in enumerate(func.args[1].args) if is_parameter(x)][2]
+
+    deleteat!(func.args[1].args, var_index)
+
+    if isa(var, Expr)
+        var = var.args[1]
+    end
+
+    func.args[2] = Expr(:(->), var, func.args[2])
+
     quote
         @__doc__ $(esc(func_original))
                  $(esc(func))
