@@ -73,4 +73,3 @@ type FixedParameter <: ModelParameter
     end
 
 end
-

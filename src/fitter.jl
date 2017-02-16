@@ -617,6 +617,8 @@ Returns `fitter` so that similar calls can be chained together.
     else
         fitter._converged = false
 
+        null_results!(fitter)
+
         msg = "Fit did not converge."
         warn(msg)
     end

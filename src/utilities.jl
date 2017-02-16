@@ -1,5 +1,6 @@
 
 import Base.@__doc__
+import Base.Meta.isexpr
 
 
 """
@@ -65,7 +66,7 @@ true
 macro partially_applicable(func)
     func_original = copy(func)
 
-    is_parameter(x) = isa(x, Symbol) || (isa(x, Expr) && x.head == :(::))
+    is_parameter(x) = isa(x, Symbol) || isexpr(x, :(::))
 
     (var_index, var) =
         [(i, x) for (i, x) in enumerate(func.args[1].args) if is_parameter(x)][2]
