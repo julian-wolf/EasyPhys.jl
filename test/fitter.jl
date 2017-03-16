@@ -1,9 +1,13 @@
 
+import DataFrames.DataFrame
+
 @testset "fitter.jl" begin
 
 @testset "fitter.jl exceptions" begin
     f_test(x, a, b) = a.*x .+ b
     g_test(x) = x.^2
+
+    bad_data_test = DataFrame(Any[[1:10], [7:16]])
 
     fitter_test = Fitter(f_test; autoplot=false)
 
@@ -14,6 +18,11 @@
                                                         [4, 5], [1, 2, 3])
     @test_throws EasyPhys.BadDataException    set_data!(fitter_test, [1, 2, 3],
                                                         [4, 5, 6], [1, 2])
+    @test_throws EasyPhys.BadDataException    set_data!(fitter_test, bad_data_test)
+
+    @test_throws KeyError fitter_test[:notakey] = 7
+    @test_throws KeyError something = fitter_test[:stillnotakey]
+
 end
 
 tolerance_test = 0.08
@@ -64,11 +73,18 @@ end
     set_data!(fitter_test, xdata_test, ydata_test, eydata_test)
 
     fitter_test |> fix!(a=1) |> guess!(b=2) |> fit!
+    @test fitter_test[:a] == 1
     show(fitter_test)
+
+    guess!(fitter_test; a=3)
+    @test fitter_test[:a] == 1
 
     fitter_test[:a] = 1.1
     fitter_test[:b] = 3
     fitter_test |> fit!
+
+    fix!(fitter_test; b=2)
+    @test_throws EasyPhys.CannotFitException fit!(fitter_test)
 
     fitter_test |> free!(a=1) |> fit!
     fitter_test |> fix!(b=1) |> guess!([2.0]) |> fit!

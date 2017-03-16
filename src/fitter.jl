@@ -242,26 +242,18 @@ used. Returns `fitter` so that similar calls can be chained together.
         fitter::Fitter, parameters...; parameter_value_pairs...)
 
     for parameter in parameters
-        free!(fitter._parameters[parameter])
+        p = fitter._parameters[parameter]
+        fitter._parameters[parameter] = FreeParameter(p.position, p.value)
     end
 
     for (parameter, guess) in parameter_value_pairs
-        free!(fitter._parameters[parameter], guess)
+        p = fitter._parameters[parameter]
+        fitter._parameters[parameter] = FreeParameter(p.position, guess)
     end
 
     null_results!(fitter)
 
     fitter
-end
-
-
-function free!(parameter::ModelParameter)
-    parameter = FreeParameter(parameter.position, parameter.value)
-end
-
-
-function free!(parameter::ModelParameter, guess)
-    parameter = FreeParameter(parameter.position, guess)
 end
 
 
@@ -276,17 +268,13 @@ For each `{parameter => value}` pair in `parameter_value_pairs`, fixes
 """
 @partially_applicable function fix!(fitter::Fitter; parameter_value_pairs...)
     for (parameter, value) in parameter_value_pairs
-        fix!(fitter._parameters[parameter], value)
+        p = fitter._parameters[parameter]
+        fitter._parameters[parameter] = FixedParameter(p.position, value)
     end
 
     null_results!(fitter)
 
     fitter
-end
-
-
-function fix!(parameter::ModelParameter, value)
-    parameter = FixedParameter(parameter.position, value)
 end
 
 
@@ -324,7 +312,6 @@ end
 
 
 @partially_applicable function guess!(fitter::Fitter, values)
-
     free_parameters =
         [k for (k, v) in fitter._parameters if isa(v, FreeParameter)]
 
