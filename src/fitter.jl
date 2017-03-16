@@ -44,7 +44,7 @@ type Fitter
     _outliers::BitArray{1}
 
     "Studentized residuals of the fit."
-    _residuals::Nullable{Array{AbstractFloat, 1}}
+    _residuals::Nullable{Vector{AbstractFloat}}
 
     "Covariance matrix of the best-fit parameters."
     _covariance::Union{Array{Float64, 2}, Void}
@@ -230,16 +230,23 @@ null_results!(fitter::Fitter) = null_results!(fitter._parameters)
 
 
 """
-    free!(fitter::Fitter, parameters...)
+    free!(fitter::Fitter, parameters...; parameter_value_pairs...)
 
-    (fitter::Fitter) |> free!(parameters...)
+    (fitter::Fitter) |> free!(parameters...; parameter_value_pairs...)
 
-Frees `parameters` from any constraints when fitting. Returns `fitter`
-so that similar calls can be chained together.
+Frees `parameters` from any constraints when fitting. Guesses can
+be provided using keyword arguments; otherwise, previous values are
+used. Returns `fitter` so that similar calls can be chained together.
 """
-@partially_applicable function free!(fitter::Fitter, parameters...)
+@partially_applicable function free!(
+        fitter::Fitter, parameters...; parameter_value_pairs...)
+
     for parameter in parameters
         free!(fitter._parameters[parameter])
+    end
+
+    for (parameter, guess) in parameter_value_pairs
+        free!(fitter._parameters[parameter], guess)
     end
 
     null_results!(fitter)
@@ -252,6 +259,10 @@ function free!(parameter::ModelParameter)
     parameter = FreeParameter(parameter.position, parameter.value)
 end
 
+
+function free!(parameter::ModelParameter, guess)
+    parameter = FreeParameter(parameter.position, guess)
+end
 
 
 """
@@ -279,15 +290,14 @@ function fix!(parameter::ModelParameter, value)
 end
 
 
-# TODO: test `guess!`
 """
     guess!(fitter::Fitter, values::Dict{Symbol, AbstractFloat})
 
     (fitter::Fitter) |> guess!(values::Dict{Symbol, AbstractFloat})
 
-    guess!(fitter::Fitter, values::Array{AbstractFloat, 1})
+    guess!(fitter::Fitter, values)
 
-    (fitter::Fitter) |> guess!(values::Array{AbstractFloat, 1})
+    (fitter::Fitter) |> guess!(values)
 
     guess!(fitter::Fitter; parameter_value_pairs...)
 
@@ -313,8 +323,7 @@ Set the initial guesses used to fit the free parameters of `fitter`.
 end
 
 
-@partially_applicable function guess!(
-        fitter::Fitter, values::Array{AbstractFloat, 1})
+@partially_applicable function guess!(fitter::Fitter, values)
 
     free_parameters =
         [k for (k, v) in fitter._parameters if isa(v, FreeParameter)]
@@ -325,12 +334,12 @@ end
         warn(msg)
     end
 
-    guess!(Dict((p, v) for (p, v) in zip(free_parameters, values)))
+    guess!(fitter, Dict{Symbol, AbstractFloat}(zip(free_parameters, values)))
 end
 
 
 @partially_applicable function guess!(fitter::Fitter; parameter_value_pairs...)
-    guess!(fitter, parameter_value_pairs)
+    guess!(fitter, Dict{Symbol, AbstractFloat}(parameter_value_pairs))
 end
 
 """

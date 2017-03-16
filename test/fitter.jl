@@ -1,12 +1,12 @@
 
 @testset "fitter.jl" begin
 
-f_test(x, a, b) = a.*x .+ b
-g_test(x) = x.^2
-
-fitter_test = Fitter(f_test; autoplot=false)
-
 @testset "fitter.jl exceptions" begin
+    f_test(x, a, b) = a.*x .+ b
+    g_test(x) = x.^2
+
+    fitter_test = Fitter(f_test; autoplot=false)
+
     @test_throws EasyPhys.CannotFitException  Fitter(g_test)
     @test_throws EasyPhys.NoResultsException  fitter_test[:a]
     @test_throws EasyPhys.BadDataException    fit!(fitter_test)
@@ -52,6 +52,7 @@ eydata_test = 0.01;
     show(fitter_test)
 
     show(parameter_covariance(fitter_test))
+    show("\n\n")
 end
 
 @testset "fitter.jl fixing and freeing parameters" begin
@@ -60,15 +61,20 @@ end
     a = 1
     b = 2
     ydata_test = model_test(xdata_test, a, b) + 0.01*randn(length(xdata_test))
+    set_data!(fitter_test, xdata_test, ydata_test, eydata_test)
 
-    set_data!(fitter_test, xdata_test, ydata_test, eydata_test) |> fix!(a=1) |> fit!
+    fitter_test |> fix!(a=1) |> guess!(b=2) |> fit!
     show(fitter_test)
 
     fitter_test[:a] = 1.1
+    fitter_test[:b] = 3
     fitter_test |> fit!
+
+    fitter_test |> free!(a=1) |> fit!
+    fitter_test |> fix!(b=1) |> guess!([2.0]) |> fit!
     show(fitter_test)
 
-    fitter_test |> free!(:a) |> fit!
+    fitter_test |> free!(:b) |> guess!([2.0, 1.0]) |> fit!
     show(fitter_test)
 end
 
