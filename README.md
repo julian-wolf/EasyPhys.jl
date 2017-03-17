@@ -26,7 +26,7 @@ and `fit!`.
 
     julia> using EasyPhys
 
-    julia> model(x, a, b) = a .* exp(-b .* x);
+    julia> model(x, a, b) = a .* exp.(-b .* x);
 
     julia> xdata = linspace(0,10,100); ydata = model(xdata, 1.0, 2.0) + 0.01*randn(length(xdata)); eydata = 0.01;
 

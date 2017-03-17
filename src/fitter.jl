@@ -449,9 +449,9 @@ end
         throw(BadDataException(msg))
     end
 
-    if is( xvar, nothing)  xvar = names(dataframe)[1] end
-    if is( yvar, nothing)  yvar = names(dataframe)[2] end
-    if is(eyvar, nothing) eyvar = names(dataframe)[3] end
+    if  (xvar === nothing)  xvar = names(dataframe)[1] end
+    if  (yvar === nothing)  yvar = names(dataframe)[2] end
+    if (eyvar === nothing) eyvar = names(dataframe)[3] end
 
     fitter[:xvar] = xvar
     fitter[:yvar] = yvar
@@ -501,7 +501,7 @@ fit results.
 """
 @partially_applicable function ignore_outliers!(
         fitter::Fitter, max_residual=10, params=[])
-    outliers = abs(studentized_residuals(fitter, params)) .> max_residual
+    outliers = abs.(studentized_residuals(fitter, params)) .> max_residual
 
     fitter |> apply_mask!(~outliers)
 end
@@ -513,8 +513,8 @@ end
 Gets the active x-limits `xmin` and `xmax` of `fitter`.
 """
 function xlims(fitter::Fitter)
-    xmin = is(fitter[:xmin], nothing) ? minimum(xdata(fitter)) : fitter[:xmin]
-    xmax = is(fitter[:xmax], nothing) ? maximum(xdata(fitter)) : fitter[:xmax]
+    xmin = fitter[:xmin] === nothing ? minimum(xdata(fitter)) : fitter[:xmin]
+    xmax = fitter[:xmax] === nothing ? maximum(xdata(fitter)) : fitter[:xmax]
 
     (xmin, xmax)
 end
@@ -588,7 +588,7 @@ Returns `fitter` so that similar calls can be chained together.
 
     guesses = [fitter._parameters[k].value for k in fitting_params]
 
-    weights = 1 ./ abs(eydata_fit)
+    weights = 1 ./ abs.(eydata_fit)
     fit_results = curve_fit(
         fitting_function, xdata_fit, ydata_fit, weights, guesses)
 
@@ -654,7 +654,7 @@ function studentized_residuals(fitter::Fitter, params=[])
         end
     else
         fit_mask = data_mask(fitter)
-        weights = 1 ./ abs(eydata(fitter)[fit_mask])
+        weights = 1 ./ abs.(eydata(fitter)[fit_mask])
 
         resids = ydata(fitter)[fit_mask]
                - apply_f(fitter, xdata(fitter)[fit_mask], params)

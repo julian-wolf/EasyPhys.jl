@@ -4,7 +4,7 @@ import DataFrames.DataFrame
 @testset "fitter.jl" begin
 
 @testset "fitter.jl exceptions" begin
-    f_test(x, a, b) = a.*x .+ b
+    f_test(x, a, b) = a .* x .+ b
     g_test(x) = x.^2
 
     bad_data_test = DataFrame(Any[[1:10], [7:16]])
@@ -28,7 +28,7 @@ end
 tolerance_test = 0.08
 outlier_threshold_test = 2
 
-model_test(x, a, b) = a*exp(-x*b)
+model_test(x, a, b) = a .* exp.(-x .* b)
 
 xdata_test = linspace(0, 10, 100)
 eydata_test = 0.01;
