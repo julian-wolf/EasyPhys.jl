@@ -3,6 +3,23 @@ import Base.@__doc__
 import Base.Meta.isexpr
 
 
+# """
+#     @model f(var, params...) = ()
+
+#     @model function f(var, params...) end
+
+# Allows `f` to be used as a fitting function by storing extra information
+# about its arguments.
+# """
+# macro model(func)
+
+#     quote
+#         @__doc__ $(esc(func))
+
+#     end
+# end
+
+
 """
     number_of_arguments(method::Function)
 
@@ -28,7 +45,7 @@ function argument_names(method::Function)
 
     argtypes = repeat([Any]; outer=n_args)
     lowered_code = first(code_lowered(method, argtypes))
-    @assert lowered_code.nargs - 1 == n_args
+    # @assert lowered_code.nargs - 1 == n_args
 
     lowered_code.slotnames[2:end]
 end

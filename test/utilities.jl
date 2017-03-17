@@ -16,6 +16,6 @@ for x in 1:5, a in 6:10, b in 1:10
 end
 
 EasyPhys.@partially_applicable g_test(x; kwargs...) = (println(kwargs); 5*x)
-@test g_test(2; test=:whocares) == 2 |> g_test(test=:doesntmatter) == 10
+@test g_test(2; test=:whocares) == (2::Int) |> g_test(test=:doesntmatter) == 10
 
 end
