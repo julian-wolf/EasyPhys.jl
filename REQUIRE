@@ -4,3 +4,4 @@ PyCall
 PyPlot
 DataFrames
 DataArrays
+Compat

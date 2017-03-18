@@ -19,6 +19,9 @@ export plt,
        apply_f,
        plot!
 
+using Compat
+import Compat.String
+
 include("utilities.jl")
 include("parameters.jl")
 include("fitter.jl")

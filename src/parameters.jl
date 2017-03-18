@@ -2,12 +2,8 @@
 """
 Describes a single parameter to a model function.
 """
-# abstract type ModelParameter end
-abstract ModelParameter
-
-
-# const ModelParameters = Dict{Symbol, ModelParameter}
-typealias ModelParameters Dict{Symbol, ModelParameter}
+@compat abstract type ModelParameter end
+@compat const ModelParameters = Dict{Symbol, ModelParameter}
 
 
 """
