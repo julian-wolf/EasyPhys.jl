@@ -34,7 +34,7 @@ type Fitter
     "Data to be fitted to."
     data::DataFrame
 
-    "Fit parameters with initial guesses, best-fit values, and their uncertainties."
+    "Fit parameters with initial guesses / best-fit values and uncertainties."
     _parameters::ModelParameters
 
     "Whether the most recent fitting attempt has converged."
@@ -479,7 +479,7 @@ Applies `mask` to the data associated with `fitter`. Returns `fitter`
 so that similar calls can be chained together.
 """
 @partially_applicable function apply_mask!(fitter::Fitter, mask::BitArray{1})
-    fitter._outliers = ~mask
+    @dotcompat fitter._outliers = ~mask
 
     if fitter[:autoplot]
         plot!(fitter)
@@ -570,25 +570,24 @@ Returns `fitter` so that similar calls can be chained together.
     fitting_constants = Dict{Symbol, AbstractFloat}(
         [(key, val.value) for (key, val) in fitter._parameters if isa(val, FixedParameter)])
 
+    fitting_function_args = [:fitter, fitter[:xvar], fitting_params...]
+
     auxiliary_fitting_function = eval(
-        Expr( :function
+        Expr( :(->)
             , Expr( :tuple
-                  , :fitter
-                  , fitter[:xvar]
-                  , fitting_params...)
+                  , fitting_function_args...)
             , Expr( :block
                   , [Expr(:(=), k, v) for (k, v) in fitting_constants]...
                   , Expr( :call
                         , :(fitter._f_fitting)
                         , fitter[:xvar]
                         , Expr( :vect
-                              , [k for k in all_params]...)))))
+                              , all_params...)))))
 
-    fitting_function(x, p) = auxiliary_fitting_function(fitter, x, p...)
-
+    fitting_function = (x, p) -> auxiliary_fitting_function(fitter, x, p...)
     guesses = [fitter._parameters[k].value for k in fitting_params]
-
     weights = 1 ./ abs.(eydata_fit)
+
     fit_results = curve_fit(
         fitting_function, xdata_fit, ydata_fit, weights, guesses)
 
@@ -627,7 +626,8 @@ end
 """
     parameter_covariance(fitter::Fitter)
 
-Computes the covariance matrix of the best-fit parameters associated with `fitter`.
+Computes the covariance matrix of the best-fit parameters associated
+with `fitter`.
 """
 parameter_covariance(fitter::Fitter) = fitter._covariance
 

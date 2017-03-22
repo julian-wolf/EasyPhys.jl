@@ -1,6 +1,7 @@
 
 import DataFrames.DataFrame
 
+
 @testset "fitter.jl" begin
 
 @testset "fitter.jl exceptions" begin
