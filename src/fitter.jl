@@ -573,16 +573,13 @@ Returns `fitter` so that similar calls can be chained together.
     fitting_function_args = [:fitter, fitter[:xvar], fitting_params...]
 
     auxiliary_fitting_function = eval(
-        Expr( :(->)
-            , Expr( :tuple
-                  , fitting_function_args...)
-            , Expr( :block
-                  , [Expr(:(=), k, v) for (k, v) in fitting_constants]...
-                  , Expr( :call
-                        , :(fitter._f_fitting)
-                        , fitter[:xvar]
-                        , Expr( :vect
-                              , all_params...)))))
+        quote
+            $(Expr(:tuple, fitting_function_args...)) ->
+                begin
+                    $([:($k = $v) for (k, v) in fitting_constants]...)
+                    fitter._f_fitting($(fitter[:xvar]), [$(all_params...)])
+                end
+        end)
 
     fitting_function = (x, p) -> auxiliary_fitting_function(fitter, x, p...)
     guesses = [fitter._parameters[k].value for k in fitting_params]
