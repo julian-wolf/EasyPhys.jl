@@ -8,6 +8,8 @@ plt = PyPlot
 """
     plot!(fitter::Fitter; kwargs...)
 
+    (fitter::Fitter) |> plot!
+
 Plots the data and fitting functions associated with `fitter`. Updates the
 settings of `fitter` from the values given in `kwargs` before fitting.
 Returns the canvas.
@@ -25,6 +27,26 @@ function plot!(fitter::Fitter; kwargs...)
     end
 
     fig = plt.figure(figure_number)
+
+    plot(fitter, fig)
+end
+
+
+"""
+    plot(fitter::Fitter)
+
+    (fitter::Fitter) |> plot
+
+Plots the data and fitting functions associated with `fitter`. Returns
+the canvas.
+
+# Caveats
+
+Using `plot!` is recommended unless minimizing side effects is required
+by a specific application
+"""
+function plot(fitter::Fitter, fig)
+    plt.figure(fig[:number])
 
     ax_main = plt.subplot2grid((4, 1), (0, 0), rowspan=3)
     plt.xscale(fitter[:xscale])
@@ -107,3 +129,6 @@ function plot!(fitter::Fitter; kwargs...)
 
     fig
 end
+
+
+plot(fitter::Fitter) = plot(fitter, plt.figure())

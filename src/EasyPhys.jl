@@ -17,6 +17,7 @@ export plt,
        studentized_residuals,
        reduced_χ²,
        apply_f,
+       plot,
        plot!
 
 using Compat

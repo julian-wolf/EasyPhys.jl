@@ -19,4 +19,6 @@ fit!(fitter_a_test)
 
 @test fig_a_test == ignore_outliers!(fitter_a_test, 1) |> fit! |> plot!
 
+@test fig_a_test ≠ plot(fitter_a_test)
+
 end
