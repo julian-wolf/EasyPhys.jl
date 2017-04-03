@@ -1,6 +1,7 @@
 
 import Base.@__doc__
 import Base.Meta.isexpr
+import Base.isidentifier
 
 
 """
@@ -29,9 +30,10 @@ function argument_names(method::Function)
     argtypes = repeat([Any]; outer=n_args)
     lowered_code = first(code_lowered(method, argtypes))
 
-    is_valid_argument_symbol(s::Symbol) = ~startswith(string(s), '#')
+    arguments = filter(isidentifier, lowered_code.slotnames[2:end])
+    @assert length(arguments) == number_of_arguments(method)
 
-    filter(is_valid_argument_symbol, lowered_code.slotnames[2:end])
+    arguments
 end
 
 

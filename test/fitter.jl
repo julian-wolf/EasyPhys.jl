@@ -13,13 +13,19 @@ import DataFrames.DataFrame
     fitter_test = Fitter(f_test; autoplot=false)
 
     @test_throws EasyPhys.CannotFitException  Fitter(g_test)
+
+    @test_throws EasyPhys.NoResultsException  fitter_test |> apply_f(5)
     @test_throws EasyPhys.NoResultsException  fitter_test[:a]
+
     @test_throws EasyPhys.BadDataException    fit!(fitter_test)
-    @test_throws EasyPhys.BadDataException    set_data!(fitter_test, [1, 2, 3],
-                                                        [4, 5], [1, 2, 3])
-    @test_throws EasyPhys.BadDataException    set_data!(fitter_test, [1, 2, 3],
-                                                        [4, 5, 6], [1, 2])
-    @test_throws EasyPhys.BadDataException    set_data!(fitter_test, bad_data_test)
+    @test_throws EasyPhys.BadDataException    set_data!(
+                                                fitter_test, [1, 2, 3],
+                                                [4, 5], [1, 2, 3])
+    @test_throws EasyPhys.BadDataException    set_data!(
+                                                fitter_test, [1, 2, 3],
+                                                [4, 5, 6], [1, 2])
+    @test_throws EasyPhys.BadDataException    set_data!(
+                                                fitter_test, bad_data_test)
 
     @test_throws KeyError fitter_test[:notakey] = 7
     @test_throws KeyError something = fitter_test[:stillnotakey]
@@ -32,7 +38,7 @@ outlier_threshold_test = 2
 model_test(x, a, b) = a .* exp.(-x .* b)
 
 xdata_test = linspace(0, 10, 100)
-eydata_test = 0.01;
+eydata_test = 0.01
 
 @testset "fitter.jl `fit!` and friends" begin
     fitter_test = Fitter(model_test) |> set!(autoplot=false)
@@ -45,8 +51,9 @@ eydata_test = 0.01;
         χ²_init_test = reduced_χ²(fitter_test, [a, b])
         χ²_worse_test = reduced_χ²(fitter_test)
 
-        @test all(abs([fitter_test[:a][1], fitter_test[:b][1]] .- [a, b]) ./ [a, b]
-                  .<= tolerance_test)
+        @test all(abs([fitter_test[:a][1], fitter_test[:b][1]] .- [a, b])
+                    ./ [a, b]
+                    .<= tolerance_test)
 
         ignore_outliers!(fitter_test, outlier_threshold_test) |> fit!
         χ²_better_test = reduced_χ²(fitter_test)
@@ -55,6 +62,9 @@ eydata_test = 0.01;
 
         y_true_test = model_test(xdata_test, a, b)
         @test all(apply_f(fitter_test, xdata_test, [a, b]) == y_true_test)
+
+        fix!(fitter_test; a=1.01a) |> fit! |> apply_f(5)
+        free!(fitter_test, :a)
     end
 
     fitter_test[:xmax] = 90
