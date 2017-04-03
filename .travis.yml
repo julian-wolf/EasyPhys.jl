@@ -13,6 +13,7 @@ notifications:
 
 script:
   - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.update()'
+  - julia -e 'Pkg.build("Rmath")'
   - julia -e 'ENV["PYTHON"]=""; Pkg.build("PyCall"); using PyPlot; Pkg.test("EasyPhys", coverage=true)'
 
 after_success:
