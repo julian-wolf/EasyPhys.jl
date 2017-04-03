@@ -29,7 +29,9 @@ function argument_names(method::Function)
     argtypes = repeat([Any]; outer=n_args)
     lowered_code = first(code_lowered(method, argtypes))
 
-    lowered_code.slotnames[2:end]
+    is_valid_argument_symbol(s::Symbol) = ~startswith(string(s), '#')
+
+    filter(is_valid_argument_symbol, lowered_code.slotnames[2:end])
 end
 
 

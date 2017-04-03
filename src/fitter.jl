@@ -8,6 +8,9 @@ import Base.setindex!
 import Base.show
 
 
+module auxiliary end
+
+
 type CannotFitException <: Exception
     msg::AbstractString
 end
@@ -572,16 +575,19 @@ Returns `fitter` so that similar calls can be chained together.
 
     fitting_function_args = [:fitter, fitter[:xvar], fitting_params...]
 
-    auxiliary_fitting_function = eval(
+    eval(
+        auxiliary,
         quote
-            $(Expr(:tuple, fitting_function_args...)) ->
+            fitting_function = $(Expr(:tuple, fitting_function_args...)) ->
                 begin
                     $([:($k = $v) for (k, v) in fitting_constants]...)
                     fitter._f_fitting($(fitter[:xvar]), [$(all_params...)])
                 end
         end)
 
-    fitting_function = (x, p) -> auxiliary_fitting_function(fitter, x, p...)
+    fitting_function = (x, p) ->
+        eval(auxiliary, :(fitting_function($(fitter), $(x), $(p)...)))
+
     guesses = [fitter._parameters[k].value for k in fitting_params]
     weights = 1 ./ abs.(eydata_fit)
 

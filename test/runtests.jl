@@ -1,5 +1,7 @@
+
 using EasyPhys
 using Base.Test
+
 
 test_files = ["utilities.jl", "fitter.jl", "plot.jl"]
 
