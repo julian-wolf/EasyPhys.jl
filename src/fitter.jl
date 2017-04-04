@@ -294,7 +294,8 @@ end
 
     (fitter::Fitter) |> guess!(; parameter_value_pairs...)
 
-Set the initial guesses used to fit the free parameters of `fitter`.
+Sets the initial guesses used to fit the free parameters of `fitter`.
+Returns `fitter` so that similar calls can be chained together.
 """
 @partially_applicable function guess!(
         fitter::Fitter, values::Dict{Symbol, AbstractFloat})
@@ -481,8 +482,9 @@ end
 Applies `mask` to the data associated with `fitter`. Returns `fitter`
 so that similar calls can be chained together.
 """
-@partially_applicable function apply_mask!(fitter::Fitter, mask::BitArray{1})
-    @dotcompat fitter._outliers = ~mask
+@partially_applicable function apply_mask!(
+        fitter::Fitter, mask::AbstractArray{Bool, 1})
+    fitter._outliers = (@__dot__ ~mask)
 
     if fitter[:autoplot]
         plot!(fitter)
@@ -506,7 +508,7 @@ fit results.
         fitter::Fitter, max_residual=10, params=[])
     outliers = abs.(studentized_residuals(fitter, params)) .> max_residual
 
-    fitter |> apply_mask!(~outliers)
+    fitter |> apply_mask!(@__dot__ ~outliers)
 end
 
 
@@ -532,7 +534,7 @@ as determined by `fitter[:xmin]` and `fitter[:xmax]` as well as any outliers.
 function data_mask(fitter::Fitter)
     xmin, xmax = xlims(fitter)
 
-    (xmin .<= xdata(fitter) .<= xmax) & ~fitter._outliers
+    @compat (xmin .<= xdata(fitter) .<= xmax) .& (@__dot__ ~fitter._outliers)
 end
 
 

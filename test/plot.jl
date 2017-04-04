@@ -1,7 +1,7 @@
 
 @testset "plot.jl" begin
 
-model_test(x, a, b) = a*exp(-x*b)
+model_test(x, a, b) = a .* exp.(-x .* b)
 
 xdata_test = linspace(0, 10, 100)
 ydata_test = model_test(xdata_test, 1, 2) + 0.01*randn(length(xdata_test))

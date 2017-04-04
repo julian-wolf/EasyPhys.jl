@@ -78,9 +78,11 @@ function plot(fitter::Fitter, fig)
         xdata_included, ydata_included, eydata_included;
         fitter[:style_data]...)
 
-    xdata_excluded = xdata(fitter)[~fit_mask]
-    ydata_excluded = ydata(fitter)[~fit_mask]
-    eydata_excluded = eydata(fitter)[~fit_mask]
+    inverted_mask = (@__dot__ ~fit_mask)
+
+    xdata_excluded = xdata(fitter)[inverted_mask]
+    ydata_excluded = ydata(fitter)[inverted_mask]
+    eydata_excluded = eydata(fitter)[inverted_mask]
 
     ax_main[:errorbar](
         xdata_excluded, ydata_excluded, eydata_excluded;

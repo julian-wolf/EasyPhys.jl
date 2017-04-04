@@ -51,7 +51,7 @@ eydata_test = 0.01
         χ²_init_test = reduced_χ²(fitter_test, [a, b])
         χ²_worse_test = reduced_χ²(fitter_test)
 
-        @test all(abs([fitter_test[:a][1], fitter_test[:b][1]] .- [a, b])
+        @test all(abs.([fitter_test[:a][1], fitter_test[:b][1]] .- [a, b])
                     ./ [a, b]
                     .<= tolerance_test)
 
