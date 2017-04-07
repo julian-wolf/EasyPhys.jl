@@ -6,9 +6,11 @@ So far, it's very minimal.
 
 Functionality is largely build on top of [LsqFit.jl](https://github.com/JuliaOpt/LsqFit.jl) and [PyPlot.jl](https://github.com/JuliaPy/PyPlot.jl) and has been inspired by the [Spinmob](https://github.com/Spinmob/spinmob) analysis and plotting package.
 
+Stable:
 [![EasyPhys](http://pkg.julialang.org/badges/EasyPhys_0.5.svg)](http://pkg.julialang.org/?pkg=EasyPhys)
 [![EasyPhys](http://pkg.julialang.org/badges/EasyPhys_0.6.svg)](http://pkg.julialang.org/?pkg=EasyPhys&ver=0.6)
 
+Nightly:
 [![Build Status](https://travis-ci.org/julian-wolf/EasyPhys.jl.svg)](https://travis-ci.org/julian-wolf/EasyPhys.jl)
 [![Coverage Status](https://coveralls.io/repos/github/julian-wolf/EasyPhys.jl/badge.svg?branch=master)](https://coveralls.io/github/julian-wolf/EasyPhys.jl?branch=master)
 
