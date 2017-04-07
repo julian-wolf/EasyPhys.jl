@@ -556,9 +556,9 @@ Returns `fitter` so that similar calls can be chained together.
     set!(fitter; kwargs...)
 
     fit_mask = data_mask(fitter)
-    xdata_fit = xdata(fitter)[fit_mask]
-    ydata_fit = ydata(fitter)[fit_mask]
-    eydata_fit = eydata(fitter)[fit_mask]
+    xdata_fit  = Vector{Float64}( xdata(fitter)[fit_mask])
+    ydata_fit  = Vector{Float64}( ydata(fitter)[fit_mask])
+    eydata_fit = Vector{Float64}(eydata(fitter)[fit_mask])
 
     all_params = sort(
         collect(keys(fitter._parameters)),
