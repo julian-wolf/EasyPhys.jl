@@ -7,15 +7,20 @@ import Base.isidentifier
 """
     number_of_arguments(method::Function)
 
-Gives the number of arguments taken by `method`. Requires that
-`method` is the only method belonging to its generic function.
+    number_of_arguments(method::Method)
+
+Gives the number of arguments taken by `method`. If a generic function
+is supplied, it must be associated with exactly one method.
 """
 function number_of_arguments(method::Function)
     fmethods = methods(method).ms
     @assert length(fmethods) == 1
 
-    length(first(fmethods).sig.parameters) - 1
+    number_of_arguments(first(fmethods))
 end
+
+
+number_of_arguments(method::Method) = length(method.sig.parameters) - 1
 
 
 """
