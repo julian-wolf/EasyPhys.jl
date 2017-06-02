@@ -194,7 +194,9 @@ function show(stream::IO, fitter::Fitter)
 
     if fitter._converged
         χ²_fit = reduced_χ²(fitter)
-        description *= "Best-fit parameters (χ² = $(χ²_fit)):\n\n"
+        confidence_percent = round(Integer, fitter[:error_range] * 100)
+        description *= "Best-fit parameters with $(confidence_percent)\% "
+        description *= "confidence interval (χ² = $(χ²_fit)):\n\n"
         for (key, val) in sort(
                 [(k, v) for (k, v) in fitter._parameters if isa(v, FreeParameter)],
                 by=(kv -> kv[2].position))
@@ -604,9 +606,9 @@ Returns `fitter` so that similar calls can be chained together.
 
         for (i, (param, param_error)) in enumerate(zip(params, param_errors))
             fitter._parameters[fitting_params[i]].fit_value =
-                Nullable{AbstractFloat}(params[i])
+                Nullable{AbstractFloat}(param)
             fitter._parameters[fitting_params[i]].fit_uncertainty =
-                Nullable{AbstractFloat}(param_errors[i])
+                Nullable{AbstractFloat}(param_error)
         end
 
         fitter._covariance = estimate_covar(fit_results)

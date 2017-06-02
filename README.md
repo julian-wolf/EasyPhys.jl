@@ -26,13 +26,15 @@ Usage
 Fitting is provided by the `Fitter` type and by the associated methods `set_data!`
 and `fit!`.
 
-    julia> using EasyPhys
+```jl
+julia> using EasyPhys
 
-    julia> model(x, a, b) = a .* exp.(-b .* x);
+julia> model(x, a, b) = a .* exp.(-b .* x);
 
-    julia> xdata = linspace(0,10,100); ydata = model(xdata, 1.0, 2.0) + 0.01*randn(length(xdata)); eydata = 0.01;
+julia> xdata = linspace(0,10,100); ydata = model(xdata, 1.0, 2.0) + 0.01*randn(length(xdata)); eydata = 0.01;
 
-    julia> fitter = Fitter(model) |> set_data!(xdata, ydata, eydata) |> fit!
+julia> fitter = Fitter(model) |> set_data!(xdata, ydata, eydata) |> fit!
+```
 
 TODO
 ----
